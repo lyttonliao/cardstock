@@ -1,7 +1,5 @@
-import duckdb
 import pyarrow as pa
 import pyarrow.parquet as pq
-import json
 import os
 import requests
 from dotenv import load_dotenv
@@ -12,7 +10,7 @@ load_dotenv()
 API_KEY = os.getenv("POKEMON_TCG_API_KEY")
 BASE_URL = "https://api.pokemontcg.io/v2"
 
-MIN_MARKET_PRICE = 1.00
+MIN_MARKET_PRICE = 5.00
 
 def fetch_all_set_ids():
     """Returns list of all pokemon set ids"""
@@ -23,6 +21,7 @@ def fetch_all_set_ids():
         return list(map(lambda x: x['id'], data))
     except requests.exceptions.HTTPError as err:
         print(f"HTTP Error: {err}")
+        return None
 
 def fetch_all_sets():
     """Returns list of all pokemon sets"""
@@ -33,6 +32,7 @@ def fetch_all_sets():
         return data
     except requests.exceptions.HTTPError as err:
         print(f"HTTP Error: {err}")
+        return None
 
 
 def fetch_cards_for_set(set_id):
@@ -48,6 +48,7 @@ def fetch_cards_for_set(set_id):
         return data
     except requests.exceptions.HTTPError as err:
         print(f"HTTP Error: {err}")
+        return None
 
 
 def fetch_card(card_id):
@@ -60,12 +61,13 @@ def fetch_card(card_id):
         return data
     except requests.exceptions.HTTPError as err:
         print(f"HTTP Error: {err}")
+        return None
     
 
 def extract_registry_row(card):
-    """Pulls the fields from a card dict"""
+    """Returns a list of rows, one per variant"""
 
-    return {
+    base = {
         "id": card.get("id"),
         "name": card.get("name"),
         "number": card.get("number"),
@@ -76,8 +78,15 @@ def extract_registry_row(card):
         "image_small": card.get("images", {}).get("small"),
         "image_large": card.get("images", {}).get("large"),
         "tcgplayer_url": card.get("tcgplayer", {}).get("url"),
-        "tcgplayer_market_price": card.get("tcgplayer", {}).get("prices", {}).get("holofoil", {}).get("market")
     }
+    rows = []
+    variants = card.get("tcgplayer", {}).get("prices", {})
+    for variant_name, prices in variants.items():
+        market_price = prices.get("market")
+        if market_price and market_price > MIN_MARKET_PRICE:
+            rows.append({**base, "variant": variant_name, "tcgplayer_market_price": market_price})
+    
+    return rows
 
 def main():
     print(f"Loading cards from all sets...")
@@ -95,9 +104,8 @@ def main():
             continue
 
         for card in cards:
-            row = extract_registry_row(card)
-            if row["tcgplayer_market_price"] and row["tcgplayer_market_price"] > MIN_MARKET_PRICE:
-                rows.append(row)
+            rows.extend(extract_registry_row(card))
+            
     print(f"Total rows: {len(rows)} loaded")
 
     os.makedirs("data/registry", exist_ok=True)

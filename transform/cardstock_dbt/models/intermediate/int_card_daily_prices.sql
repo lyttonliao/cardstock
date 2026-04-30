@@ -18,4 +18,4 @@ select
     r.variant,
     r.tcgplayer_market_price
 from prices p
-left join registry r on p.card_id = r.card_id
+left join registry r on p.card_id = r.card_id and p.variant = r.variant

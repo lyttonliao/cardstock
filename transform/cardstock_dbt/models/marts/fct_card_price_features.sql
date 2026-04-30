@@ -20,9 +20,9 @@ windowed as (
         nm_price > price_ma_6m as above_ma_6m
     from daily
     window
-        w_3m as (partition by card_id order by price_date::date range between interval '3 months'  preceding and current row),
-        w_6m as (partition by card_id order by price_date::date range between interval '6 months'  preceding and current row),
-        w_12m as (partition by card_id order by price_date::date range between interval '12 months' preceding and current row)
+        w_3m as (partition by card_id, variant order by price_date::date range between interval '3 months'  preceding and current row),
+        w_6m as (partition by card_id, variant order by price_date::date range between interval '6 months'  preceding and current row),
+        w_12m as (partition by card_id, variant order by price_date::date range between interval '12 months' preceding and current row)
 )
 
 select
@@ -31,7 +31,7 @@ select
     (
         select p2.nm_price
         from daily p2
-        where p2.card_id = p.card_id
+        where p2.card_id = p.card_id and p2.variant = p.variant
             and p2.price_date > p.price_date
             and cast(p2.price_date as date) <= cast(p.price_date as date) + interval '31 days'
         order by p2.price_date desc
@@ -40,7 +40,7 @@ select
     (
         select p2.nm_price
         from daily p2
-        where p2.card_id = p.card_id
+        where p2.card_id = p.card_id and p2.variant = p.variant
             and p2.price_date > p.price_date
             and cast(p2.price_date as date) <= cast(p.price_date as date) + interval '92 days'
         order by p2.price_date desc
@@ -49,7 +49,7 @@ select
     (
         select p2.nm_price
         from daily p2
-        where p2.card_id = p.card_id
+        where p2.card_id = p.card_id and p2.variant = p.variant
             and p2.price_date > p.price_date
             and cast(p2.price_date as date) <= cast(p.price_date as date) + interval '183 days'
         order by p2.price_date desc

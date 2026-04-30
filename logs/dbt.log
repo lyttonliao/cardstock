@@ -1,0 +1,45 @@
+[0m08:29:52.486635 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x102dc4c20>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10527fc50>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10527fed0>]}
+
+
+============================== 08:29:52.488754 | 6bfdc774-8441-4b62-893a-1fe74315d736 ==============================
+[0m08:29:52.488754 [info ] [MainThread]: Running with dbt=1.8.0
+[0m08:29:52.489018 [debug] [MainThread]: running dbt with arguments {'printer_width': '80', 'indirect_selection': 'eager', 'write_json': 'True', 'log_cache_events': 'False', 'partial_parse': 'True', 'cache_selected_only': 'False', 'warn_error': 'None', 'fail_fast': 'False', 'profiles_dir': '/Users/lliao/.dbt', 'log_path': 'logs', 'version_check': 'True', 'debug': 'False', 'use_colors': 'True', 'use_experimental_parser': 'False', 'no_print': 'None', 'quiet': 'False', 'log_format': 'default', 'invocation_command': 'dbt run', 'static_parser': 'True', 'introspect': 'True', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'send_anonymous_usage_stats': 'True'}
+[0m08:29:52.489251 [error] [MainThread]: Encountered an error:
+Runtime Error
+  No dbt_project.yml found at expected path /Users/lliao/work/cardstock/dbt_project.yml
+  Verify that each entry within packages.yml (and their transitive dependencies) contains a file named dbt_project.yml
+  
+[0m08:29:52.490388 [debug] [MainThread]: Resource report: {"command_name": "run", "command_wall_clock_time": 0.028674, "process_user_time": 0.451528, "process_kernel_time": 0.070977, "process_mem_max_rss": "104742912", "command_success": false, "process_in_blocks": "0", "process_out_blocks": "0"}
+[0m08:29:52.490587 [debug] [MainThread]: Command `dbt run` failed at 08:29:52.490548 after 0.03 seconds
+[0m08:29:52.490726 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105167a80>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1052d1130>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105136ad0>]}
+[0m08:29:52.490856 [debug] [MainThread]: Flushing usage events
+[0m08:55:50.532377 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1055a4c20>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x108bbfc50>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x108bbfed0>]}
+
+
+============================== 08:55:50.534468 | 0eea1c23-645a-41ea-9cf0-925ac2128712 ==============================
+[0m08:55:50.534468 [info ] [MainThread]: Running with dbt=1.8.0
+[0m08:55:50.534699 [debug] [MainThread]: running dbt with arguments {'printer_width': '80', 'indirect_selection': 'eager', 'write_json': 'True', 'log_cache_events': 'False', 'partial_parse': 'True', 'cache_selected_only': 'False', 'profiles_dir': '/Users/lliao/.dbt', 'debug': 'False', 'fail_fast': 'False', 'log_path': 'logs', 'warn_error': 'None', 'version_check': 'True', 'use_colors': 'True', 'use_experimental_parser': 'False', 'no_print': 'None', 'quiet': 'False', 'log_format': 'default', 'introspect': 'True', 'static_parser': 'True', 'invocation_command': 'dbt run', 'target_path': 'None', 'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'send_anonymous_usage_stats': 'True'}
+[0m08:55:50.534898 [error] [MainThread]: Encountered an error:
+Runtime Error
+  No dbt_project.yml found at expected path /Users/lliao/work/cardstock/dbt_project.yml
+  Verify that each entry within packages.yml (and their transitive dependencies) contains a file named dbt_project.yml
+  
+[0m08:55:50.535904 [debug] [MainThread]: Resource report: {"command_name": "run", "command_wall_clock_time": 0.029198542, "process_user_time": 0.456631, "process_kernel_time": 0.069473, "process_mem_max_rss": "106807296", "command_success": false, "process_in_blocks": "0", "process_out_blocks": "0"}
+[0m08:55:50.536086 [debug] [MainThread]: Command `dbt run` failed at 08:55:50.536049 after 0.03 seconds
+[0m08:55:50.536204 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x108aaba80>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x108c11130>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x108a7aad0>]}
+[0m08:55:50.536318 [debug] [MainThread]: Flushing usage events
+[0m18:38:15.580262 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1030a4c20>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1053bfc50>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1053bfed0>]}
+
+
+============================== 18:38:15.582932 | c9dea18b-6139-4164-8c6f-6d7ca9409189 ==============================
+[0m18:38:15.582932 [info ] [MainThread]: Running with dbt=1.8.0
+[0m18:38:15.583170 [debug] [MainThread]: running dbt with arguments {'printer_width': '80', 'indirect_selection': 'eager', 'log_cache_events': 'False', 'write_json': 'True', 'partial_parse': 'True', 'cache_selected_only': 'False', 'profiles_dir': '/Users/lliao/.dbt', 'fail_fast': 'False', 'warn_error': 'None', 'log_path': 'logs', 'version_check': 'True', 'debug': 'False', 'use_colors': 'True', 'use_experimental_parser': 'False', 'no_print': 'None', 'quiet': 'False', 'warn_error_options': 'WarnErrorOptions(include=[], exclude=[])', 'static_parser': 'True', 'introspect': 'True', 'log_format': 'default', 'target_path': 'None', 'invocation_command': 'dbt run', 'send_anonymous_usage_stats': 'True'}
+[0m18:38:15.583386 [error] [MainThread]: Encountered an error:
+Runtime Error
+  No dbt_project.yml found at expected path /Users/lliao/work/cardstock/dbt_project.yml
+  Verify that each entry within packages.yml (and their transitive dependencies) contains a file named dbt_project.yml
+  
+[0m18:38:15.585310 [debug] [MainThread]: Resource report: {"command_name": "run", "command_wall_clock_time": 0.033703916, "process_user_time": 0.485664, "process_kernel_time": 0.10956, "process_mem_max_rss": "106594304", "command_success": false, "process_in_blocks": "0", "process_out_blocks": "0"}
+[0m18:38:15.585571 [debug] [MainThread]: Command `dbt run` failed at 18:38:15.585529 after 0.03 seconds
+[0m18:38:15.585709 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x1052aba80>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105411130>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10527aad0>]}
+[0m18:38:15.585837 [debug] [MainThread]: Flushing usage events
