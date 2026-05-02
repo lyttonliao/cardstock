@@ -12,7 +12,7 @@ df = conn.execute("SELECT * FROM fct_card_price_features").fetchdf()
 TARGET = "next_3m_price"
 
 FEATURES = [
-    "nm_price", "price_ma_3m", "price_ma_6m", "price_ma_12m",
+    "monthly_price", "daily_price", "price_ma_3m", "price_ma_6m", "price_ma_12m",
     "price_stddev_3m", "days_since_release", "price_6m_high", "price_6m_low",
     "stochastic_k_6m", "stochastic_k_3m", "above_ma_3m", "above_ma_6m",
     "price_momentum_3m", "month_of_year",
@@ -27,7 +27,7 @@ for col in ["rarity", "variant", "set_id"]:
 
 df["price_date"] = df["price_date"].astype("datetime64[ns]")
 
-cutoff = pd.Timestamp("2025-03-01")
+cutoff = pd.Timestamp("2026-03-01")
 train = df[df["price_date"] < cutoff]
 test = df[df["price_date"] >= cutoff]
 
@@ -59,14 +59,14 @@ importances = pd.Series(
     index=FEATURES
 ).sort_values(ascending=False)
 
-results = test[["card_id", "name", "price_date", "nm_price"]].copy()
+results = test[["card_id", "name", "price_date", "monthly_price"]].copy()
 results["predicted"] = preds
 results["actual"] = y_test.values
 results["error"] = results["predicted"] - results["actual"]
 results["abs_error"] = results["error"].abs()
 
 print("\nWorst predictions (largest errors):")
-print(results.nlargest(10, "abs_error")[["name", "price_date", "nm_price", "predicted", "actual", "error"]].to_string())
+print(results.nlargest(10, "abs_error")[["name", "price_date", "monthly_price", "predicted", "actual", "error"]].to_string())
 
 print("\nSample predictions:")
-print(results.sample(10, random_state=42)[["name", "price_date", "nm_price", "predicted", "actual", "error"]].to_string())
+print(results.sample(10, random_state=42)[["name", "price_date", "monthly_price", "predicted", "actual", "error"]].to_string())
