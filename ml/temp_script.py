@@ -29,16 +29,16 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 conn = duckdb.connect()
 
-# print(conn.execute("SELECT * FROM '../data/registry/card_registry.parquet' WHERE id = 'dp1-33'").fetchdf())
+print(conn.execute("SELECT * FROM 'data/registry/card_registry.parquet' WHERE set_id = 'me2pt5'").fetchdf())
 # print(conn.execute("SELECT variant, count(*) FROM '../data/registry/card_registry.parquet' GROUP BY variant ORDER BY count(*) DESC").fetchdf()
 # )
 
-conn.execute("""
-COPY (
-    SELECT 
-        card_id AS id,
-        * EXCLUDE (card_id)
-    FROM read_parquet('../data/prices/daily_price_history.parquet')
-)
-TO '../data/prices/daily_price_history_updated.parquet' (FORMAT PARQUET)
-""")
+# conn.execute("""
+# COPY (
+#     SELECT 
+#         card_id AS id,
+#         * EXCLUDE (card_id)
+#     FROM read_parquet('../data/prices/daily_price_history.parquet')
+# )
+# TO '../data/prices/daily_price_history_updated.parquet' (FORMAT PARQUET)
+# """)
