@@ -1,4 +1,6 @@
-REGISTRY_PATH = "data/registry/card_registry.parquet"
+import os
+_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REGISTRY_PATH = os.path.join(_ROOT, "data", "registry", "card_registry.parquet")
 MIN_MARKET_PRICE = 5.00
 
 # ── Specialty sets ─────────────────────────────────────────────────────────────

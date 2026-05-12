@@ -1,5 +1,5 @@
 select
-    card_id,
+    id as card_id,
     cast(date as date) as price_date,
     market_price as tcgplayer_market_price,
     variant

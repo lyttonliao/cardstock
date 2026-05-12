@@ -10,6 +10,8 @@ select
     image_small,
     image_large,
     tcgplayer_url,
-    tcgplayer_market_price
+    tcgplayer_market_price,
+    is_specialty_set,
+    packs_per_specific_card
 from 
     read_parquet('{{ var("data_dir") }}/registry/card_registry.parquet')

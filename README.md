@@ -1,392 +1,31 @@
-# Cardstock — Card Price Oracle
+# Cardstock — Card Price Prediction
 
-A end-to-end ML system that predicts trading card prices by learning from historical price trends and card attributes. Built for Pokemon and One Piece TCG markets. Card price prediction has rich feature engineering — set release cycles, print run announcements, PSA population reports, pull rate data, and influencer hype cycles are all predictable signals. 
+An end-to-end ML pipeline that predicts Pokemon TCG card prices 3 months forward. Combines historical price data, TCGPlayer market prices, and Google Trends signals into a feature-rich XGBoost model.
+
+**Current model performance (May 2026):** MAE $4.92 · RMSE $15.12 on a March 2026 holdout set.
 
 ---
 
-## Architecture Overview
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DATA INGESTION                           │
-│                                                                 │
-│   eBay Sold Listings ──┐                                        │
-│   TCGPlayer API ───────┼──► GitHub Actions (cron) ──► Parquet  │
-│   Reddit / Discord ────┘                              on R2     │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      TRANSFORMATION (dbt)                       │
-│                                                                 │
-│   Raw Parquet ──► DuckDB ──► dbt models ──► Feature tables      │
-│                              (tested, typed, documented)        │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       ML TRAINING                               │
-│                                                                 │
-│   Feature tables ──► XGBoost / Prophet ──► MLflow (Railway)     │
-│                                            SHAP explainability  │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       SERVING                                   │
-│                                                                 │
-│   FastAPI (Railway) ──► React Dashboard (Vercel)                │
-│   /predict endpoint        Recharts time-series                 │
-└─────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                     INFRASTRUCTURE                              │
-│                                                                 │
-│   Terraform ──► terraform plan on PR / apply on merge           │
-│                 (Railway services + R2 bucket as code)          │
-└─────────────────────────────────────────────────────────────────┘
+Data Sources
+    │
+    ▼
+[Ingestion Layer]   Python scripts
+    │               pokemontcg.io API, PriceCharting scraper,
+    │               TCGPlayer API (daily), Google Trends
+    │
+    │  writes Parquet files → data/
+    ▼
+[Transform Layer]   dbt Core + DuckDB
+    │               Staging → Intermediate → Mart
+    │
+    │  materialises fct_card_price_features → dev.duckdb
+    ▼
+[ML Layer]          XGBoost + MLflow
+                    trains on log returns, saves ml/models/xgb_v1.json
 ```
-
----
-
-## Technology Deep Dives
-
-### 1. Data Sources
-
-#### eBay Finding API + Playwright (Scraping)
-
-**What it is:** eBay's Finding API gives access to completed (sold) listings — the actual transaction prices, not just asking prices. For cards not well-covered by the API, Playwright (a browser automation library) handles JavaScript-rendered pages.
-
-**Why completed listings matter:** A card listed at $500 is noise. A card *sold* for $500 is signal. This distinction is the foundation of any serious price model. The eBay completed listings feed is the closest thing the card market has to a real-time exchange.
-
-**What you build:**
-- An idempotent scraper: running it twice on the same day writes the same data, never duplicates. This is a distributed systems concept interviewers probe directly.
-- Deduplication by listing ID before writing to Parquet
-- Exponential backoff with jitter on rate limit (429) responses
-
-**Interview talking point:** *"I designed the scraper to be idempotent — each run checks for existing listing IDs before writing, so reruns after a failure don't corrupt the dataset. This mirrors exactly how Kafka consumers handle at-least-once delivery."*
-
----
-
-#### TCGPlayer API
-
-**What it is:** TCGPlayer is the largest dedicated TCG marketplace. Their API provides structured market data: market price, low/mid/high, foil vs non-foil, condition breakdowns. Free tier with API key.
-
-**What you build:**
-- Paginated ingestion with cursor-based pagination (a common interview topic)
-- Handling product variants: same card, different conditions (NM, LP, MP) are separate SKUs
-- Price normalization across condition grades
-
-**Interview talking point:** *"TCGPlayer gives me structured market aggregates while eBay gives raw transaction-level data. I join them on card ID to get both the 'official' market price and what cards are actually clearing for in real auctions — the spread between them is itself a feature."*
-
----
-
-#### PRAW — Reddit API Wrapper
-
-**What it is:** PRAW (Python Reddit API Wrapper) is the standard library for Reddit's API. Subreddits like r/PokemonTCG, r/pkmntcg, and r/OnePieceTCG are the primary hype signal sources.
-
-**What you build:**
-- Post and comment ingestion from target subreddits on a daily cron
-- Keyword extraction: card names, set names, price mentions
-- Sentiment scoring using VADER (rule-based, no GPU needed) or a small HuggingFace model
-
-**Why it matters for the model:** Price spikes on cards frequently lead or coincide with Reddit discussion volume. A card getting 50 posts in 24 hours is a measurable leading indicator. This is the kind of domain-specific feature engineering that makes interviewers lean in.
-
-**Interview talking point:** *"Social signal is a leading indicator, not a lagging one. I measure Reddit mention velocity — posts per day on a card — and it correlates with price movement 1-3 days later. That lag is actually useful: it gives the model a predictive window."*
-
----
-
-### 2. Storage
-
-#### DuckDB + Apache Parquet
-
-**What it is:** DuckDB is an in-process analytical database — it runs inside your Python script or CLI, no server required. It reads Parquet files directly, executing SQL with columnar performance. Parquet is a binary column-oriented file format designed for analytical workloads.
-
-**Why not SQLite or Postgres?** SQLite is row-oriented and slow on analytical queries. Postgres requires a running server. DuckDB + Parquet gives you:
-- Columnar compression (a 1M row price history file might be 8MB on disk)
-- SQL on files without loading into memory
-- Zero ops — no database to manage, back up, or pay for
-- Portable: the entire dataset is just files you can copy anywhere
-
-**The data lake pattern:** Raw data lands in Parquet on object storage (Cloudflare R2). DuckDB reads it directly via the HTTP URL. No ETL pipeline needed to "load" data — the query engine reads the files in place.
-
-```
-r2://cardstock-data/
-  raw/
-    ebay/2025-01-15.parquet
-    ebay/2025-01-16.parquet
-    tcgplayer/2025-01-15.parquet
-  transformed/
-    features/card_price_features.parquet
-```
-
-**Interview talking point:** *"I deliberately chose DuckDB over Postgres because the workload is analytical — range scans over time-series data, aggregations, joins. DuckDB's columnar execution is 10-100x faster for this access pattern. This is the same reasoning behind why data warehouses like BigQuery and Snowflake use columnar storage."*
-
----
-
-#### Cloudflare R2
-
-**What it is:** R2 is Cloudflare's S3-compatible object storage. 10GB free, no egress fees (unlike AWS S3), and accessible via the standard boto3/S3 SDK by just changing the endpoint URL.
-
-**Why it matters:** It's a real production data lake, not a local folder. Your GitHub Actions runners write to R2, your dbt models read from R2, your training jobs pull from R2 — all using standard S3 interfaces. This is cloud-native architecture without cloud costs.
-
-**Interview talking point:** *"Using R2 means I can swap to AWS S3 by changing one environment variable. The interface is identical. This is the portability argument for cloud-agnostic tooling."*
-
----
-
-### 3. Transformation
-
-#### dbt Core
-
-**What it is:** dbt (data build tool) lets you write data transformations as SQL `SELECT` statements. It handles the `CREATE TABLE AS SELECT` boilerplate, manages dependencies between models, runs data quality tests, and generates documentation automatically.
-
-**The file that makes interviewers nod:** A dbt project has a `schema.yml` that looks like:
-
-```yaml
-models:
-  - name: card_price_features
-    description: "Daily card price features joined with social signals"
-    columns:
-      - name: price_usd
-        tests:
-          - not_null
-          - dbt_utils.accepted_range:
-              min_value: 0
-              max_value: 100000
-      - name: card_id
-        tests:
-          - not_null
-          - unique
-```
-
-This is automated data quality. Every dbt run validates your data contracts. If a scraper starts returning nulls or negative prices, the pipeline fails loudly before bad data reaches your model.
-
-**The DAG:** dbt builds a directed acyclic graph of your models. `stg_ebay_sales` feeds into `int_card_daily_prices` feeds into `fct_card_price_features`. This is the exact mental model data engineers use for pipeline dependencies — and dbt makes it visual.
-
-**Interview talking point:** *"Junior portfolios have notebooks. dbt gives me tested, documented, version-controlled transformations that anyone on the team can run. The data quality tests caught a bug where the eBay scraper was returning listing prices instead of sold prices — the `accepted_range` test failed immediately."*
-
----
-
-### 4. Machine Learning
-
-#### XGBoost / LightGBM
-
-**What it is:** Gradient boosting libraries for tabular data. XGBoost and LightGBM are decision tree ensembles that win most Kaggle competitions on structured data. They handle missing values natively, are robust to feature scaling, and train in seconds on datasets of this size.
-
-**Why not a neural network?** For tabular data with engineered features, gradient boosting consistently outperforms deep learning. Using a neural network here would signal you're chasing complexity over results. Interviewers respect the correct tool for the task.
-
-**Features you engineer:**
-- Rolling averages: 7-day, 30-day, 90-day price, 200-day price
-- Price momentum: current price vs moving averages
-- Reddit mention velocity: posts/day over a range of time
-- PSA population growth rate: new graded copies per week (might exclude PSA)
-- Days since set release
-- Is reprint announced (binary)
-- Pull rate (cards per box for this rarity)
-- Tournament appearance count (trailing 30 days)
-
-**Interview talking point:** *"The model's most important features were 30-day price momentum and public sentiment/mention velocity. SHAP values told me that — which leads into how I used explainability to validate that the model was learning real signals, not spurious correlations."*
-
----
-
-#### Prophet
-
-**What it is:** Facebook's open-source time series forecasting library. It fits an additive model with trend, seasonality, and holiday components. It handles missing data and outliers well, and produces uncertainty intervals out of the box.
-
-**Role in this project:** Prophet serves as the baseline model. Every ML project needs a baseline to beat — it's the benchmark that justifies the complexity of XGBoost. If XGBoost only marginally outperforms Prophet, that's a finding worth explaining.
-
-**Interview talking point:** *"I ran Prophet as a baseline to establish how much of the price movement is explainable by pure time-series trend and seasonality. XGBoost with engineered features outperformed it by 23% on MAE — which tells me the cross-sectional features (social signals, population reports) are genuinely adding predictive value beyond what the time series alone captures."*
-
----
-
-#### MLflow (hosted on Railway)
-
-**What it is:** MLflow is the open-source standard for ML experiment tracking. Every training run logs: hyperparameters, metrics (MAE, RMSE, R²), artifacts (model files, SHAP plots), and the code version that produced them.
-
-**What you track:**
-```
-Run: xgb_v3_2025-01-15
-  Params: n_estimators=500, max_depth=6, learning_rate=0.05
-  Metrics: val_mae=2.31, val_rmse=4.87, val_r2=0.78
-  Artifacts: model.pkl, shap_summary.png, feature_importance.json
-```
-
-**Why it matters:** Without MLflow, you can't answer "which model version is in production?" or "what hyperparameters produced that result last month?" These are questions you will be asked in any ML engineering interview.
-
-**Interview talking point:** *"MLflow gave me reproducibility — every model in production has a logged run ID, and I can re-derive any artifact from scratch given that run's logged parameters and the Git SHA it was trained on."*
-
----
-
-#### SHAP (SHapley Additive exPlanations)
-
-**What it is:** SHAP computes each feature's contribution to each individual prediction using game theory (Shapley values). For tree models like XGBoost, it runs in O(TLD) time — fast enough for production use.
-
-**What you produce:**
-- Summary plots: which features matter most across the entire dataset
-- Waterfall plots: for a single card, why is the model predicting $45 vs $30?
-- Dependence plots: how does Reddit mention velocity affect price predictions across the range?
-
-**Interview talking point:** *"When the model predicted an unusually high price for a card, I ran a SHAP waterfall plot. The top contributor was Reddit mention velocity spiking 400% — which turned out to be a streamer posting about the card that day. That kind of explainability is what separates a model you can trust from a black box."*
-
----
-
-### 5. Serving
-
-#### FastAPI
-
-**What it is:** FastAPI is the modern Python web framework for building APIs. It's built on Starlette (ASGI) and Pydantic, giving you async request handling, automatic OpenAPI docs, and runtime type validation out of the box.
-
-**What you build:**
-```
-POST /predict
-  body: { card_id: str, horizon_days: int }
-  response: { predicted_price: float, confidence_interval: [float, float], shap_values: {...} }
-
-GET /cards/{card_id}/history
-  response: { prices: [{date, price, volume}] }
-
-GET /health
-  response: { status: "ok", model_version: str, last_trained: str }
-```
-
-**The `/health` endpoint matters:** In interviews about production systems, you'll be asked about observability. A health endpoint that exposes model version and last training date shows you think about ops, not just code.
-
-**Interview talking point:** *"FastAPI's dependency injection lets me swap the model artifact in tests without changing the endpoint logic — the same pattern you'd use in Spring or ASP.NET. It also generates OpenAPI docs automatically, which is what the React frontend consumes to stay in sync with the API contract."*
-
----
-
-#### React + Recharts
-
-**What it is:** React is the standard frontend library. Recharts is a React-native charting library built on D3 — it handles the SVG rendering for you while staying idiomatic React (components, props, state).
-
-**What you build:**
-- Price history chart: candlestick or line chart of daily prices with volume bars
-- Forecast overlay: predicted price with confidence interval shaded
-- Feature importance sidebar: which signals drove this card's prediction
-- Card search with autocomplete
-
-**Why Recharts over D3 directly:** D3 is powerful but imperative — you manipulate the DOM directly. Recharts wraps D3 in React components, so the chart re-renders when data changes and integrates cleanly with React state. For a portfolio project, this is the pragmatic choice.
-
-**Interview talking point:** *"I used Recharts because the charts need to respond to user interactions — selecting a date range re-queries the API and re-renders. D3 would work, but Recharts keeps the rendering inside React's reconciler, which is the correct mental model for a React app."*
-
----
-
-### 6. Infrastructure
-
-#### GitHub Actions (Free Cloud Compute)
-
-**What it is:** GitHub Actions is CI/CD with cron scheduling. It runs workflows on GitHub's servers — 2,000 free minutes/month on private repos, unlimited on public.
-
-**How it powers this project:**
-
-```yaml
-# .github/workflows/ingest.yml
-on:
-  schedule:
-    - cron: '0 6 * * *'   # 6 AM UTC daily
-
-jobs:
-  ingest:
-    runs-on: ubuntu-latest
-    steps:
-      - run: python ingestion/ebay_scraper.py
-      - run: python ingestion/tcgplayer_scraper.py
-      - run: python ingestion/reddit_scraper.py
-
-# .github/workflows/transform.yml
-on:
-  workflow_run:
-    workflows: ["ingest"]
-    types: [completed]
-
-jobs:
-  transform:
-    steps:
-      - run: dbt run && dbt test
-
-# .github/workflows/retrain.yml
-on:
-  schedule:
-    - cron: '0 8 * * 0'   # Sunday 8 AM — weekly retrain
-```
-
-**The key design principle — idempotency:** Every job can be re-run without corrupting data. This is the distributed systems property that makes cron jobs safe. Interviewers probe this: "what happens if the job runs twice?"
-
-**Interview talking point:** *"GitHub Actions is my orchestrator. Each workflow is triggered by the previous completing successfully — ingest, then transform, then optionally retrain. This is a simplified version of the DAG scheduling that Airflow and Prefect do, and it costs nothing."*
-
----
-
-#### Terraform
-
-**What it is:** Terraform is an infrastructure-as-code tool. You declare what infrastructure you want in `.tf` files, run `terraform plan` to preview changes, and `terraform apply` to provision them.
-
-**What you define:**
-```hcl
-# infrastructure/main.tf
-
-resource "cloudflare_r2_bucket" "cardstock_data" {
-  name = "cardstock-data"
-}
-
-resource "railway_service" "mlflow" {
-  name        = "mlflow-server"
-  source_image = "ghcr.io/mlflow/mlflow:latest"
-}
-
-resource "railway_service" "fastapi" {
-  name   = "cardstock-api"
-  source = { repo = "your-org/cardstock" }
-}
-```
-
-**The CI integration:**
-```yaml
-# On pull request: show what would change
-- run: terraform plan
-
-# On merge to main: apply the changes
-- run: terraform apply -auto-approve
-```
-
-**Why this is a senior signal:** Clicking through a UI to provision infrastructure is not reproducible, not reviewable, and not recoverable when something goes wrong. Terraform means your infrastructure is in Git — it has history, it goes through code review, and you can rebuild from scratch in minutes.
-
-**Interview talking point:** *"Every infrastructure change goes through a pull request. The CI pipeline runs `terraform plan` and posts the diff as a comment — same as a code diff, but for cloud resources. When a reviewer approves and the PR merges, `terraform apply` runs automatically. This is exactly how infrastructure teams at scale operate."*
-
----
-
-#### Railway
-
-**What it is:** Railway is a PaaS (Platform as a Service) that deploys Docker containers from a Git repo or image. It has a generous free tier and handles networking, environment variables, and persistent volumes.
-
-**What runs on Railway:**
-- **MLflow Tracking Server** — stores experiment metadata in Railway's managed Postgres, artifacts in R2
-- **FastAPI prediction server** — auto-deploys on push to `main`
-
-**Why Railway over Heroku/Render:** Railway's free tier is more generous, the developer experience is better, and it supports more service types. The important thing for this project is that it gives you a real HTTPS URL for your API — not localhost.
-
-**Interview talking point:** *"I deploy to Railway via a `railway.toml` config file in the repo. Push to main triggers a build and deploy — zero manual steps. Combined with Terraform for provisioning the services themselves, the entire deployment process is automated and documented in code."*
-
----
-
-## Feature Engineering Reference
-
-The features that differentiate this model from a naive time-series predictor:
-
-| Feature | Type | Signal |
-|---|---|---|
-| `price_ma_7d` | Numeric | Short-term momentum |
-| `price_ma_30d` | Numeric | Medium-term trend |
-| `price_ma_90d` | Numeric | Long-term baseline |
-| `price_momentum` | Numeric | Current vs 30d MA ratio |
-| `reddit_mentions_7d` | Numeric | Social hype velocity |
-| `reddit_sentiment_avg` | Numeric | Positive vs negative discussion |
-| `psa_pop_growth_rate` | Numeric | Supply pressure signal |
-| `days_since_set_release` | Numeric | Set lifecycle position |
-| `is_reprint_announced` | Binary | Major supply shock |
-| `pull_rate_rarity` | Numeric | Pack EV component |
-| `tournament_appearances_30d` | Numeric | Competitive demand |
-| `ebay_tcgplayer_spread` | Numeric | Cross-market arbitrage signal |
 
 ---
 
@@ -394,72 +33,213 @@ The features that differentiate this model from a naive time-series predictor:
 
 ```
 cardstock/
-├── .github/
-│   └── workflows/
-│       ├── ingest.yml          # Daily scraping cron
-│       ├── transform.yml       # dbt run + test
-│       └── retrain.yml         # Weekly model retrain
 ├── ingestion/
-│   ├── ebay_scraper.py
-│   ├── tcgplayer_scraper.py
-│   └── reddit_scraper.py
+│   ├── pokemontcg_client.py          # pokemontcg.io API wrapper
+│   ├── bootstrap_card_registry.py    # one-time: build card catalog
+│   ├── price_history_scraper.py      # PriceCharting monthly history
+│   ├── tcgplayer_daily_prices.py     # daily TCGPlayer prices (cron)
+│   └── google_trends.py              # Google Trends monthly interest
 ├── transform/
-│   └── cardstock_dbt/          # dbt project
-│       ├── models/
-│       │   ├── staging/        # Raw → typed
-│       │   ├── intermediate/   # Business logic
-│       │   └── marts/          # Feature tables
-│       └── tests/
-├── training/
-│   ├── train_xgboost.py
-│   ├── train_prophet.py
-│   └── evaluate.py
-├── api/
-│   └── main.py                 # FastAPI app
-├── dashboard/
-│   └── src/                    # React app
-├── infrastructure/
-│   └── main.tf                 # Terraform config
-└── README.md
+│   └── cardstock_dbt/
+│       └── models/
+│           ├── staging/
+│           │   ├── stg_card_registry.sql
+│           │   ├── stg_price_history.sql
+│           │   ├── stg_daily_price_history.sql
+│           │   └── stg_google_trends.sql
+│           ├── intermediate/
+│           │   ├── int_card_daily_prices.sql
+│           │   └── int_set_release_features.sql
+│           └── marts/
+│               └── fct_card_price_features.sql
+├── ml/
+│   ├── train.py
+│   └── models/
+│       └── xgb_v1.json
+├── data/
+│   ├── registry/card_registry.parquet
+│   ├── prices/
+│   │   ├── price_history.parquet
+│   │   └── daily_price_history.parquet
+│   └── trends/google_trends.parquet
+└── requirements.txt
 ```
+
+---
+
+## Data Flow
+
+```
+pokemontcg.io API
+    → bootstrap_card_registry.py
+    → data/registry/card_registry.parquet        (one row per card+variant)
+
+PriceCharting.com (scraped)
+    → price_history_scraper.py
+    → data/prices/price_history.parquet          (monthly NM prices, 2020→now)
+
+pokemontcg.io API (daily cron)
+    → tcgplayer_daily_prices.py
+    → data/prices/daily_price_history.parquet    (daily TCGPlayer prices)
+
+Google Trends (pytrends)
+    → google_trends.py
+    → data/trends/google_trends.parquet          (monthly US interest score)
+
+dbt run
+    stg_card_registry          ← card_registry.parquet
+    stg_price_history          ← price_history.parquet
+    stg_daily_price_history    ← daily_price_history.parquet
+    stg_google_trends          ← google_trends.parquet
+    int_card_daily_prices      ← stg_price_history + stg_card_registry + stg_daily_price_history
+    int_set_release_features   ← stg_price_history + stg_card_registry + stg_google_trends
+    fct_card_price_features    ← int_card_daily_prices + int_set_release_features + stg_google_trends
+        → materialised in transform/cardstock_dbt/dev.duckdb
+
+python ml/train.py
+    → reads fct_card_price_features from dev.duckdb
+    → trains XGBRegressor on log(next_3m_price / monthly_price)
+    → saves ml/models/xgb_v1.json
+    → logs run to ml/mlruns/
+```
+
+---
+
+## Ingestion
+
+### `pokemontcg_client.py`
+Thin wrapper around the pokemontcg.io REST API. `fetch_all_set_ids()` returns every set ID; `fetch_cards_for_set(set_id)` returns all cards for a set with TCGPlayer pricing and metadata. Reads `POKEMON_TCG_API_KEY` from `.env`.
+
+### `bootstrap_card_registry.py`
+Run once to build the master card catalog. Loops every set, extracts one row per card+variant, filters out variants below a minimum market price (removes bulk commons). Writes to `data/registry/card_registry.parquet` via PyArrow.
+
+### `price_history_scraper.py`
+Scrapes monthly Near Mint price history from PriceCharting.com for every card in the registry. PriceCharting embeds historical data as a JavaScript variable (`VGPC.chart_data`) in the page HTML, extracted with a regex. Key features:
+- `slugify()` converts card/set names to URL-safe slugs with Unicode normalization
+- `SET_SLUG_MAP` and `VARIANT_SLUG_MAP` handle cases where PriceCharting URLs differ from pokemontcg.io naming
+- Fallback logic: if a variant URL 404s, retries without the variant suffix
+- Resume logic: tracks already-scraped `(card_id, variant)` pairs so the job can be stopped and restarted
+- Polite crawling: `random.uniform(1.5, 3.0)` second delay between requests
+- Appends to existing Parquet on re-runs using `pa.concat_tables`
+
+### `tcgplayer_daily_prices.py`
+Designed as a daily cron. Fetches today's TCGPlayer market prices for all tracked cards via the pokemontcg.io API. Idempotent: `already_fetched_today()` checks the existing parquet before writing to prevent duplicate rows.
+
+### `google_trends.py`
+Fetches US search interest for `["pokemon cards", "pokemon tcg"]` over the full data window using pytrends (Google Trends unofficial API). Averages both keywords into a single `interest_score`, then resamples weekly data to monthly using `resample("MS")` (month-start). Saves 77 monthly rows to `data/trends/google_trends.parquet`.
+
+---
+
+## Transform (dbt)
+
+### Staging
+
+Thin wrappers that read Parquet via DuckDB's `read_parquet()` and standardise types/names. Notable:
+- `stg_card_registry.sql`: `cast(replace(set_release_date, '/', '-') as date)` — the API returns dates as `"2024/01/26"`, DuckDB needs hyphens
+- `stg_daily_price_history.sql`: renames `market_price` → `tcgplayer_market_price`
+
+### `int_card_daily_prices.sql`
+
+Joins monthly PriceCharting history with registry metadata and daily TCGPlayer prices. The core challenge: PriceCharting snapshots land on the 1st of each month (`2026-04-01`) while TCGPlayer daily data has dates like `2026-04-30` — a direct join produces no matches. Solution: a `daily_prices_monthly` CTE aggregates daily prices to monthly averages using `date_trunc('month', ...)`, then the join matches on month.
+
+Also computes `launch_price` — the first-ever recorded price per card — using `first_value(nm_price) over (partition by card_id, variant order by price_date)`.
+
+### `int_set_release_features.sql`
+
+Computes two macro market signals per price date:
+
+- `days_since_recent_set_release`: how many days since the most recent set launched
+- `hype_weighted_release_90d`: sum of average card launch prices for sets released in the trailing 90 days — a pure set quality signal (market temperature is captured separately by `pokemon_interest_score`)
+
+Uses a `QUALIFY` clause to select each card's first price snapshot after its release date, then averages by set. Cross-joins every price date against all released sets to compute the rolling window aggregate.
+
+### `fct_card_price_features.sql`
+
+The final feature table — one row per card per month, ~30 columns. Three CTE layers:
+
+**`windowed`** — rolling window features using named SQL windows (`w_3m`, `w_6m`, `w_12m`):
+- Moving averages: `price_ma_3m/6m/12m`
+- Volatility: `price_stddev_3m`
+- Range: `price_6m_high/low`
+- Oscillators: `stochastic_k_6m/3m` = `(current - min) / (max - min)`, returns 0–1 relative to the period's range
+- Trend flags: `above_ma_3m/6m/12m`
+
+**`enriched`** — second layer required because SQL can't reference window aliases in the same SELECT:
+- `price_change_3m_pct/12m_pct`: how far current price sits from its 3m/12m moving average (momentum)
+- `price_change_since_launch`: `ln(monthly_price / launch_price)` — log appreciation since earliest recorded price; 0 at launch, `ln(10) ≈ 2.3` for a 10x card
+- `months_above_ma_12m`: rolling 12-month count of how many months the card stayed above its 12m MA — distinguishes sustained uptrends from brief spikes
+
+**Final SELECT** — joins the two intermediate models and google trends, adds `price_momentum_3m`, `pokemon_interest_score`, `month_of_year`, and three correlated subqueries for forward-looking targets (`next_1m_price`, `next_3m_price`, `next_6m_price`).
+
+---
+
+## ML Training (`ml/train.py`)
+
+**Target:** `return_3m = log(next_3m_price / monthly_price)` — the 3-month log return. Training in log-return space is scale-invariant: a $10 card doubling looks identical to a $500 card doubling. This prevents XGBoost from learning absolute price levels and regressing to the mean on high-value cards.
+
+At inference time, predictions are converted back to dollars: `predicted_price = monthly_price × exp(model.predict(X))`.
+
+**Train/test split:** Temporal cutoff at `2026-03-01` — all data before is training, March 2026 onward is the holdout. A random split would leak future prices into training and produce falsely optimistic metrics.
+
+**Features (28 total):**
+
+| Group | Features |
+|---|---|
+| Price levels | `monthly_price`, `daily_price` |
+| Moving averages | `price_ma_3m/6m/12m` |
+| Volatility | `price_stddev_3m` |
+| Range | `price_6m_high/low`, `stochastic_k_6m/3m` |
+| Momentum | `price_momentum_3m`, `price_change_3m_pct`, `price_change_12m_pct`, `price_change_since_launch` |
+| Trend regime | `above_ma_3m/6m/12m`, `months_above_ma_12m` |
+| Card fundamentals | `days_since_release`, `is_specialty_set`, `packs_per_specific_card` |
+| Market macro | `days_since_recent_set_release`, `hype_weighted_release_90d`, `pokemon_interest_score` |
+| Calendar | `month_of_year` |
+| Categorical | `rarity`, `variant`, `set_id` |
+
+**Model:** `XGBRegressor` with `enable_categorical=True` (native handling of `rarity`, `variant`, `set_id` without encoding), 500 trees, learning rate 0.05, max depth 6.
+
+**Experiment tracking:** MLflow wraps every run, logging hyperparameters, train/test row counts, dollar-space MAE and RMSE, and the model artifact. Tracking URI is local (`ml/mlruns/`, gitignored).
 
 ---
 
 ## Getting Started
 
 ```bash
-# Clone and install
-git clone https://github.com/your-org/cardstock
-cd cardstock
+# Install dependencies
 pip install -r requirements.txt
 
 # Configure environment
 cp .env.example .env
-# Fill in: EBAY_API_KEY, TCGPLAYER_API_KEY, REDDIT_CLIENT_ID, R2_ACCESS_KEY, etc.
+# Set: POKEMON_TCG_API_KEY
 
-# Run ingestion locally
-python ingestion/ebay_scraper.py --date 2025-01-15
+# 1. Build card registry (run once)
+cd ingestion && python bootstrap_card_registry.py
 
-# Run dbt transformations
+# 2. Scrape price history (run once, takes a while)
+python ingestion/price_history_scraper.py
+
+# 3. Fetch Google Trends (run once)
+python ingestion/google_trends.py
+
+# 4. Run daily price fetch (or set up as cron)
+python ingestion/tcgplayer_daily_prices.py
+
+# 5. Run dbt transforms
 cd transform/cardstock_dbt
-dbt run && dbt test
+dbt run
 
-# Train model
-python training/train_xgboost.py
-
-# Start API
-uvicorn api.main:app --reload
-
-# Start dashboard
-cd dashboard && npm install && npm run dev
+# 6. Train model
+cd ml && python train.py
 ```
 
 ---
 
-## Data Collection Timeline
+## Known Limitations
 
-Run the scrapers for **90 days minimum** before training. A year of daily price history across 5,000 cards is a real dataset — enough to demo forecasts that visually nail the price spike after a card appears in a competitive deck, or the crash after a reprint is announced.
+- **High-value vintage cards:** The test set RMSE ($15.12) is skewed by ~10 vintage cards (Umbreon, Lugia, Lucky Stadium) that underwent sharp price surges in early 2026. These regime changes are hard to predict from historical patterns alone. For cards under $200, error is substantially lower.
+- **No volume data:** Buy/sell volume from marketplaces would be a strong signal but requires paid API access.
+- **Pull rate data:** Pack pull rates affect card supply; currently approximated by `packs_per_specific_card` from the registry.
 
 ---
 
-*Built with DuckDB, dbt Core, XGBoost, MLflow, FastAPI, React, and Terraform. Deployed on Railway and Cloudflare R2.*
+*Stack: Python · DuckDB · Apache Parquet · dbt Core · XGBoost · MLflow · pytrends · pokemontcg.io API*
