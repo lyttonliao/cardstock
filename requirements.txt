@@ -17,6 +17,14 @@ numpy==2.4.4
 dbt-core==1.8.0
 dbt-duckdb==1.8.4
 
+# api
+fastapi>=0.111
+uvicorn>=0.29
+
 # ml
 xgboost==3.2.0
 scikit-learn>=1.4
+mlflow>=2.14,<3
+protobuf>=4.0.0,<5.0.0
+pytrends>=4.9
+urllib3<2

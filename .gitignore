@@ -2,3 +2,6 @@
 logs/
 *.duckdb
 *.duckdb.wal
+mlruns/
+__pycache__/
+*.pyc
