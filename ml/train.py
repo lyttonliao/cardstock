@@ -105,6 +105,7 @@ with mlflow.start_run() as run:
     mlflow.log_metric("test_rows", len(test))
 
     model_path = os.path.join(BASE_DIR, "ml", "models", "xgb_v1.json")
+    os.makedirs(os.path.dirname(model_path), exist_ok=True)
     model.save_model(model_path)
     mlflow.log_artifact(model_path, artifact_path="model")
 

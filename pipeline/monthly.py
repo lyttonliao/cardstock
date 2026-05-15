@@ -4,7 +4,7 @@ from pipeline.s3 import download, upload, BASE_DIR
 
 
 def main():
-    download(["trends", "duckdb"])
+    download(["trends", "duckdb", "model"])
 
     subprocess.run([sys.executable, "ingestion/google_trends.py"], check=True)
     subprocess.run(
@@ -14,7 +14,7 @@ def main():
     )
     subprocess.run([sys.executable, "ml/train.py"], check=True)
 
-    upload(["trends", "duckdb"])
+    upload(["trends", "duckdb", "model"])
 
 
 if __name__ == "__main__":
