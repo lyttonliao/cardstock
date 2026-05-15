@@ -1,0 +1,6 @@
+cardstock_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "dev.duckdb"
