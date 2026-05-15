@@ -9,6 +9,7 @@ S3_KEYS = {
     "daily_prices": "prices/daily_price_history.parquet",
     "trends":       "trends/google_trends.parquet",
     "duckdb":       "db/dev.duckdb",
+    "model":        "ml/xgb_v1.json",
 }
 
 LOCAL_PATHS = {
@@ -16,13 +17,17 @@ LOCAL_PATHS = {
     "daily_prices": BASE_DIR / "data/prices/daily_price_history.parquet",
     "trends":       BASE_DIR / "data/trends/google_trends.parquet",
     "duckdb":       BASE_DIR / "transform/cardstock_dbt/dev.duckdb",
+    "model":        BASE_DIR / "ml/models/xgb_v1.json"
 }
 
 
 def create_client():
-    # boto3 automatically reads AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-    # and AWS_DEFAULT_REGION from environment variables — no credentials in code
-    return boto3.client("s3")
+    return boto3.client(
+        "s3",
+        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
+        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
+        region_name=os.environ["AWS_DEFAULT_REGION"],
+    )
 
 
 def download(keys: list[str]) -> None:
