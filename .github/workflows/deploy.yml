@@ -41,12 +41,16 @@ jobs:
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       # Downloads the current task definition JSON from ECS so we can
-      # update just the image field without redefining everything else
+      # update just the image field without redefining everything else.
+      # jq strips fields that describe-task-definition returns but
+      # register-task-definition does not accept (enableFaultInjection
+      # is a newer field unknown to the action's AWS SDK v2).
       - name: Download task definition
         run: |
           aws ecs describe-task-definition \
             --task-definition ${{ secrets.ECS_TASK_DEFINITION }} \
-            --query taskDefinition > task-definition.json
+            --query taskDefinition \
+          | jq 'del(.enableFaultInjection)' > task-definition.json
 
       # Swaps the container image in the task definition JSON with the
       # newly built image, producing an updated task definition file
