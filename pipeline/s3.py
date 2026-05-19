@@ -1,6 +1,7 @@
 import os
 import boto3
 from pathlib import Path
+from core.config import settings
 
 BASE_DIR = Path(__file__).parent.parent
 
@@ -24,9 +25,9 @@ LOCAL_PATHS = {
 def create_client():
     return boto3.client(
         "s3",
-        aws_access_key_id=os.environ["AWS_ACCESS_KEY_ID"],
-        aws_secret_access_key=os.environ["AWS_SECRET_ACCESS_KEY"],
-        region_name=os.environ["AWS_DEFAULT_REGION"],
+        aws_access_key_id=settings.aws_access_key_id,
+        aws_secret_access_key=settings.aws_secret_access_key,
+        region_name=settings.aws_default_region,
     )
 
 
@@ -34,7 +35,7 @@ def download(keys: list[str]) -> None:
     # Called at the start of a pipeline run to pull the latest files from S3
     # onto the GitHub Actions runner's local disk before the scripts need them
     s3 = create_client()
-    bucket = os.environ["S3_BUCKET"]
+    bucket = settings.s3_bucket
 
     for key in keys:
         local = LOCAL_PATHS[key]
@@ -51,7 +52,7 @@ def upload(keys: list[str]) -> None:
     # Called at the end of a pipeline run to push the updated files back to S3
     # so the next run (and the API server) can access the latest data
     s3 = create_client()
-    bucket = os.environ["S3_BUCKET"]
+    bucket = settings.s3_bucket
 
     for key in keys:
         local = LOCAL_PATHS[key]

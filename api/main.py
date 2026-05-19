@@ -7,12 +7,19 @@ from api.constants import DB_PATH, MODEL_PATH
 from api.dependencies import set_db_conn, set_model
 from api.routers import cards, predict, model
 
+from pipeline.s3 import download
+from core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Download files from S3 at startup before the app serves requests
+    if settings.s3_bucket:
+        download(["registry", "duckdb", "model"])
+
     # Open a single read-only DuckDB connection shared across all requests.
     # read_only=True allows multiple processes to open the same .duckdb file.
     conn = duckdb.connect(DB_PATH, read_only=True)
+    
 
     # Load the XGBoost model once at startup.
     # model.predict() is stateless and thread-safe for concurrent inference.
