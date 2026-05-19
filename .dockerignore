@@ -1,0 +1,9 @@
+.venv/
+data/
+logs/
+ml/models/
+ml/mlruns/
+transform/cardstock_dbt/dev.duckdb
+transform/cardstock_dbt/target/
+__pycache__/
+.env
