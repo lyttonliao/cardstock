@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 import duckdb
 import xgboost as xgb
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from api.constants import DB_PATH, MODEL_PATH
 from api.dependencies import set_db_conn, set_model
@@ -39,6 +41,13 @@ app = FastAPI(
     description="Pokemon TCG card price prediction API",
     version="1.0.0",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(cards.router)
