@@ -11,8 +11,13 @@ const BASE = process.env.NEXT_PUBLIC_API_URL
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, options);
-  if (!res.ok) throw new Error(`API error ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  if (!res.ok) {
+    console.error("API error", res.status, JSON.stringify(data));
+    throw new Error(`API error ${res.status}`);
+  }
+  console.log("API response", JSON.stringify(data).slice(0, 500));
+  return data;
 }
 
 export function getCards(params: CardSearchParams): Promise<CardListResponse> {
