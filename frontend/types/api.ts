@@ -39,6 +39,8 @@ export interface PriceHistoryResponse {
   rarity: string | null,
   set_id: string,
   set_name: string,
+  image_small: string,
+  image_large: string,
   prices: PricePoint[],
 }
 

@@ -41,4 +41,6 @@ class PriceHistoryResponse(BaseModel):
     rarity: Optional[str]
     set_id: str
     set_name: str
+    image_small: str
+    image_large: str
     prices: list[PricePoint]

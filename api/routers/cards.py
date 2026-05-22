@@ -162,6 +162,8 @@ def get_price_history(
         rarity=m["rarity"] if pd.notna(m["rarity"]) else None,
         set_id=m["set_id"],
         set_name=m["set_name"],
+        image_small=m["image_small"],
+        image_large=m["image_large"],
         prices=[
             PricePoint(
                 price_date=row["price_date"],
