@@ -142,3 +142,8 @@ export interface CardPricesSearchParams {
   from_date?: string,
   to_date?: string,
 }
+
+export interface CardVariantsResponse {
+  card_id: string,
+  variants: string[],
+}

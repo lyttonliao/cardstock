@@ -3,18 +3,25 @@ import {
   CardListResponse,
   PriceHistoryResponse,
   CardPricesSearchParams,
+  CardVariantsResponse,
   PredictResponse,
   ModelInfoResponse
 } from "../types/api"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL
 
+export class ApiError extends Error {
+  constructor(public status: number, public detail: string) {
+    super(`API error ${status}: ${detail}`);
+  }
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, options);
   const data = await res.json();
   if (!res.ok) {
     console.error("API error", res.status, JSON.stringify(data));
-    throw new Error(`API error ${res.status}`);
+    throw new ApiError(res.status, data?.detail ?? res.statusText);
   }
   console.log("API response", JSON.stringify(data).slice(0, 500));
   return data;
@@ -49,6 +56,10 @@ export function predict(cardId: string, variant: string): Promise<PredictRespons
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ card_id: cardId, variant }),
   })
+}
+
+export function getCardVariants(cardId: string): Promise<CardVariantsResponse> {
+  return apiFetch<CardVariantsResponse>(`/cards/${cardId}/variants`);
 }
 
 export function getModelInfo(): Promise<ModelInfoResponse> {

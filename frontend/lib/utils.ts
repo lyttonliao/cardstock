@@ -11,7 +11,7 @@ export function capitalizeStr(str: string): string {
 
 export function formatDate(dateStr: string) {
   const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return date.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 export function formatPrice(value: number) {

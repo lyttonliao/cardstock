@@ -1,4 +1,5 @@
-import { getCardPrices, predict } from "@/lib/api";
+import { redirect, notFound } from "next/navigation";
+import { getCardPrices, getCardVariants, ApiError, predict } from "@/lib/api";
 import { capitalizeStr, formatDate, formatPrice } from "@/lib/utils";
 import PriceChart from "@/components/PriceChart/PriceChart";
 
@@ -55,16 +56,27 @@ export default async function CardPage({
 }) {
   const { id } = await params;
   const { variant: variantParam } = await searchParams;
+
+  // If no variant in the URL, resolve the best available one and redirect if needed.
+  if (!variantParam) {
+    const variantsData = await getCardVariants(id).catch(() => null);
+    if (!variantsData?.variants.length) notFound();
+    const PREFERRED = ["normal", "holofoil", "reverseHolofoil"];
+    const best = PREFERRED.find(p => variantsData!.variants.includes(p)) ?? variantsData!.variants[0];
+    if (best !== "normal") redirect(`/cards/${id}?variant=${best}`);
+  }
+
   const variant = variantParam ?? "normal";
 
   const [prices, prediction] = await Promise.all([
-    getCardPrices({ card_id: id, variant }),
-    predict(id, variant),
+    getCardPrices({ card_id: id, variant }).catch((e: unknown) => {
+      if (e instanceof ApiError && e.status === 404) notFound();
+      throw e;
+    }),
+    predict(id, variant).catch(() => null),
   ]);
 
   const lastMonthlyPrice = prices.prices.findLast((p) => p.monthly_price !== null) ?? null;
-  const { moving_averages, momentum, volatility, trend, market_context, forecast } = prediction;
-  const predPrices = prediction.prices;
 
   return (
     <div className="font-[family-name:var(--font-rubik)]">
@@ -101,139 +113,145 @@ export default async function CardPage({
         </div>
       </div>
 
-      {/* Forecast — most prominent */}
-      <div className="mb-12">
-        <SectionHeader title="Forecast" />
-        <div className="flex gap-12">
-          <Stat label="Predicted 3M Price" value={formatPrice(forecast.predicted_3m_price)} />
-          <Stat
-            label="Expected 3M Return"
-            value={formatLogReturnPct(forecast.log_return_3m)}
-            valueClass={pctColor(forecast.log_return_3m)}
-          />
-          {forecast.actual_next_1m_price != null && (
-            <Stat label="Actual 1M Price" value={formatPrice(forecast.actual_next_1m_price)} />
-          )}
-          {forecast.actual_next_3m_price != null && (
-            <Stat label="Actual 3M Price" value={formatPrice(forecast.actual_next_3m_price)} />
-          )}
-          {forecast.actual_next_6m_price != null && (
-            <Stat label="Actual 6M Price" value={formatPrice(forecast.actual_next_6m_price)} />
-          )}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-8">
-        {/* Prices */}
-        <div className="mb-6">
-          <SectionHeader title="Prices" />
-          <div className="flex gap-12">
-            <Stat label="Monthly" value={fmt(predPrices.monthly_price, formatPrice)} />
-            <Stat label="Daily" value={fmt(predPrices.daily_price, formatPrice)} />
-            <Stat label="Launch" value={fmt(predPrices.launch_price, formatPrice)} />
-            <Stat label="All-Time High" value={fmt(predPrices.all_time_high, formatPrice)} />
+      {prediction ? (
+        <>
+          {/* Forecast — most prominent */}
+          <div className="mb-12">
+            <SectionHeader title="Forecast" />
+            <div className="flex gap-12">
+              <Stat label="Predicted 3M Price" value={formatPrice(prediction.forecast.predicted_3m_price)} />
+              <Stat
+                label="Expected 3M Return"
+                value={formatLogReturnPct(prediction.forecast.log_return_3m)}
+                valueClass={pctColor(prediction.forecast.log_return_3m)}
+              />
+              {prediction.forecast.actual_next_1m_price != null && (
+                <Stat label="Actual 1M Price" value={formatPrice(prediction.forecast.actual_next_1m_price)} />
+              )}
+              {prediction.forecast.actual_next_3m_price != null && (
+                <Stat label="Actual 3M Price" value={formatPrice(prediction.forecast.actual_next_3m_price)} />
+              )}
+              {prediction.forecast.actual_next_6m_price != null && (
+                <Stat label="Actual 6M Price" value={formatPrice(prediction.forecast.actual_next_6m_price)} />
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Moving Averages */}
-        <div className="mb-6">
-          <SectionHeader title="Moving Averages" />
-          <div className="flex gap-12">
-            <Stat label="3M Avg" value={fmt(moving_averages.ma_3m, formatPrice)} />
-            <Stat label="6M Avg" value={fmt(moving_averages.ma_6m, formatPrice)} />
-            <Stat label="12M Avg" value={fmt(moving_averages.ma_12m, formatPrice)} />
-          </div>
-        </div>
+          <div className="grid grid-cols-2 gap-8">
+            {/* Prices */}
+            <div className="mb-6">
+              <SectionHeader title="Prices" />
+              <div className="flex gap-12">
+                <Stat label="Monthly" value={fmt(prediction.prices.monthly_price, formatPrice)} />
+                <Stat label="Daily" value={fmt(prediction.prices.daily_price, formatPrice)} />
+                <Stat label="Launch" value={fmt(prediction.prices.launch_price, formatPrice)} />
+                <Stat label="All-Time High" value={fmt(prediction.prices.all_time_high, formatPrice)} />
+              </div>
+            </div>
 
-        {/* Momentum */}
-        <div className="mb-6">
-          <SectionHeader title="Momentum" />
-          <div className="flex gap-12">
-            <Stat
-              label="Price / 3M MA"
-              value={momentum.price_momentum_3m != null ? `${momentum.price_momentum_3m.toFixed(2)}x` : "—"}
-            />
-            <Stat label="vs. 3M MA" value={formatPct(momentum.price_change_3m_pct)} valueClass={pctColor(momentum.price_change_3m_pct)} />
-            <Stat label="vs. 12M MA" value={formatPct(momentum.price_change_12m_pct)} valueClass={pctColor(momentum.price_change_12m_pct)} />
-            <Stat label="Since Launch" value={formatLogReturnPct(momentum.price_change_since_launch)} valueClass={pctColor(momentum.price_change_since_launch)} />
-          </div>
-        </div>
+            {/* Moving Averages */}
+            <div className="mb-6">
+              <SectionHeader title="Moving Averages" />
+              <div className="flex gap-12">
+                <Stat label="3M Avg" value={fmt(prediction.moving_averages.ma_3m, formatPrice)} />
+                <Stat label="6M Avg" value={fmt(prediction.moving_averages.ma_6m, formatPrice)} />
+                <Stat label="12M Avg" value={fmt(prediction.moving_averages.ma_12m, formatPrice)} />
+              </div>
+            </div>
 
-        {/* Volatility */}
-        <div className="mb-6">
-          <SectionHeader title="Volatility" />
-          <div className="flex gap-12">
-            <Stat label="3M Std Dev" value={fmt(volatility.stddev_3m, formatPrice)} />
-            <Stat label="3M Coeff. of Variation" value={formatPct(volatility.cv_3m)} />
-            <Stat label="6M High" value={fmt(volatility.price_6m_high, formatPrice)} />
-            <Stat label="6M Low" value={fmt(volatility.price_6m_low, formatPrice)} />
-            <Stat label="Stochastic K (6M)" value={formatPct(volatility.stochastic_k_6m)} />
-            <Stat label="Stochastic K (3M)" value={formatPct(volatility.stochastic_k_3m)} />
-          </div>
-        </div>
+            {/* Momentum */}
+            <div className="mb-6">
+              <SectionHeader title="Momentum" />
+              <div className="flex gap-12">
+                <Stat
+                  label="Price / 3M MA"
+                  value={prediction.momentum.price_momentum_3m != null ? `${prediction.momentum.price_momentum_3m.toFixed(2)}x` : "—"}
+                />
+                <Stat label="vs. 3M MA" value={formatPct(prediction.momentum.price_change_3m_pct)} valueClass={pctColor(prediction.momentum.price_change_3m_pct)} />
+                <Stat label="vs. 12M MA" value={formatPct(prediction.momentum.price_change_12m_pct)} valueClass={pctColor(prediction.momentum.price_change_12m_pct)} />
+                <Stat label="Since Launch" value={formatLogReturnPct(prediction.momentum.price_change_since_launch)} valueClass={pctColor(prediction.momentum.price_change_since_launch)} />
+              </div>
+            </div>
 
-        {/* Trend */}
-        <div className="mb-6">
-          <SectionHeader title="Trend" />
-          <div className="flex gap-12">
-            <Stat
-              label="Above 3M MA"
-              value={trend.above_ma_3m != null ? (trend.above_ma_3m ? "Yes" : "No") : "—"}
-              valueClass={boolColor(trend.above_ma_3m)}
-            />
-            <Stat
-              label="Above 6M MA"
-              value={trend.above_ma_6m != null ? (trend.above_ma_6m ? "Yes" : "No") : "—"}
-              valueClass={boolColor(trend.above_ma_6m)}
-            />
-            <Stat
-              label="Above 12M MA"
-              value={trend.above_ma_12m != null ? (trend.above_ma_12m ? "Yes" : "No") : "—"}
-              valueClass={boolColor(trend.above_ma_12m)}
-            />
-            <Stat
-              label="Months Above 12M MA"
-              value={trend.months_above_ma_12m != null ? `${trend.months_above_ma_12m} / 12` : "—"}
-            />
-            <Stat label="% of ATH" value={formatPct(trend.price_ath_ratio)} />
-            <Stat
-              label="vs. Set Index"
-              value={trend.price_vs_set_index != null ? `${trend.price_vs_set_index.toFixed(2)}x` : "—"}
-            />
-          </div>
-        </div>
+            {/* Volatility */}
+            <div className="mb-6">
+              <SectionHeader title="Volatility" />
+              <div className="flex gap-12">
+                <Stat label="3M Std Dev" value={fmt(prediction.volatility.stddev_3m, formatPrice)} />
+                <Stat label="3M Coeff. of Variation" value={formatPct(prediction.volatility.cv_3m)} />
+                <Stat label="6M High" value={fmt(prediction.volatility.price_6m_high, formatPrice)} />
+                <Stat label="6M Low" value={fmt(prediction.volatility.price_6m_low, formatPrice)} />
+                <Stat label="Stochastic K (6M)" value={formatPct(prediction.volatility.stochastic_k_6m)} />
+                <Stat label="Stochastic K (3M)" value={formatPct(prediction.volatility.stochastic_k_3m)} />
+              </div>
+            </div>
 
-        {/* Market Context */}
-        <div className="mb-6">
-          <SectionHeader title="Market Context" />
-          <div className="flex gap-12">
-            <Stat
-              label="Interest Score"
-              value={market_context.pokemon_interest_score != null ? market_context.pokemon_interest_score.toFixed(1) : "—"}
-            />
-            <Stat
-              label="Days Since Set Release"
-              value={market_context.days_since_release != null ? `${market_context.days_since_release}d` : "—"}
-            />
-            <Stat
-              label="Recent Set Release"
-              value={market_context.days_since_recent_set_release != null ? `${market_context.days_since_recent_set_release}d ago` : "—"}
-            />
-            <Stat
-              label="Hype Score (90d)"
-              value={market_context.hype_weighted_release_90d != null ? market_context.hype_weighted_release_90d.toFixed(2) : "—"}
-            />
-            <Stat
-              label="Specialty Set"
-              value={market_context.is_specialty_set ? "Yes" : "No"}
-            />
-            <Stat
-              label="Packs / Card"
-              value={market_context.packs_per_specific_card != null ? market_context.packs_per_specific_card.toFixed(1) : "—"}
-            />
+            {/* Trend */}
+            <div className="mb-6">
+              <SectionHeader title="Trend" />
+              <div className="flex gap-12">
+                <Stat
+                  label="Above 3M MA"
+                  value={prediction.trend.above_ma_3m != null ? (prediction.trend.above_ma_3m ? "Yes" : "No") : "—"}
+                  valueClass={boolColor(prediction.trend.above_ma_3m)}
+                />
+                <Stat
+                  label="Above 6M MA"
+                  value={prediction.trend.above_ma_6m != null ? (prediction.trend.above_ma_6m ? "Yes" : "No") : "—"}
+                  valueClass={boolColor(prediction.trend.above_ma_6m)}
+                />
+                <Stat
+                  label="Above 12M MA"
+                  value={prediction.trend.above_ma_12m != null ? (prediction.trend.above_ma_12m ? "Yes" : "No") : "—"}
+                  valueClass={boolColor(prediction.trend.above_ma_12m)}
+                />
+                <Stat
+                  label="Months Above 12M MA"
+                  value={prediction.trend.months_above_ma_12m != null ? `${prediction.trend.months_above_ma_12m} / 12` : "—"}
+                />
+                <Stat label="% of ATH" value={formatPct(prediction.trend.price_ath_ratio)} />
+                <Stat
+                  label="vs. Set Index"
+                  value={prediction.trend.price_vs_set_index != null ? `${prediction.trend.price_vs_set_index.toFixed(2)}x` : "—"}
+                />
+              </div>
+            </div>
+
+            {/* Market Context */}
+            <div className="mb-6">
+              <SectionHeader title="Market Context" />
+              <div className="flex gap-12">
+                <Stat
+                  label="Interest Score"
+                  value={prediction.market_context.pokemon_interest_score != null ? prediction.market_context.pokemon_interest_score.toFixed(1) : "—"}
+                />
+                <Stat
+                  label="Days Since Set Release"
+                  value={prediction.market_context.days_since_release != null ? `${prediction.market_context.days_since_release}d` : "—"}
+                />
+                <Stat
+                  label="Recent Set Release"
+                  value={prediction.market_context.days_since_recent_set_release != null ? `${prediction.market_context.days_since_recent_set_release}d ago` : "—"}
+                />
+                <Stat
+                  label="Hype Score (90d)"
+                  value={prediction.market_context.hype_weighted_release_90d != null ? prediction.market_context.hype_weighted_release_90d.toFixed(2) : "—"}
+                />
+                <Stat
+                  label="Specialty Set"
+                  value={prediction.market_context.is_specialty_set ? "Yes" : "No"}
+                />
+                <Stat
+                  label="Packs / Card"
+                  value={prediction.market_context.packs_per_specific_card != null ? prediction.market_context.packs_per_specific_card.toFixed(1) : "—"}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      ) : (
+        <p className="text-stone-500 text-sm">No prediction data available for this card.</p>
+      )}
     </div>
   );
 }

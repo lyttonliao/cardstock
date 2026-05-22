@@ -34,7 +34,7 @@ def get_cards_list(
         conditions.append("r.set_id = ?")
         params.append(set_id)
     if variant:
-        conditions.append("r.variant = ?")
+        conditions.append("COALESCE(r.variant, 'normal') = ?")
         params.append(variant)
     if rarity:
         conditions.append("r.rarity = ?")
@@ -68,7 +68,7 @@ def get_cards_list(
             r.set_id,
             r.set_name,
             r.set_release_date,
-            r.variant,
+            COALESCE(r.variant, 'normal') as variant,
             r.is_specialty_set,
             r.packs_per_specific_card,
             r.image_small,
@@ -85,7 +85,7 @@ def get_cards_list(
             QUALIFY ROW_NUMBER() OVER (
                 PARTITION BY card_id, variant ORDER BY price_date DESC
             ) = 1
-        ) f ON r.id = f.card_id AND r.variant = f.variant
+        ) f ON r.id = f.card_id AND COALESCE(r.variant, 'normal') = f.variant
         WHERE {where}
         ORDER BY r.name, r.variant
         LIMIT ? OFFSET ?
@@ -114,6 +114,23 @@ def get_cards_list(
 
     return CardListResponse(total=total, page=page, page_size=page_size, items=items)
 
+@router.get("/{card_id}/variants")
+def get_card_variants(
+    card_id: str,
+    cursor: Annotated[duckdb.DuckDBPyConnection, Depends(get_cursor)],
+):
+    sql = f"""
+        SELECT DISTINCT COALESCE(variant, 'normal') as variant
+        FROM read_parquet('{REGISTRY_PATH}')
+        WHERE id = ?
+        ORDER BY variant
+    """
+    rows = cursor.execute(sql, [card_id]).fetchdf()
+    if rows.empty:
+        raise HTTPException(status_code=404, detail=f"Card '{card_id}' not found")
+    return {"card_id": card_id, "variants": rows["variant"].tolist()}
+
+
 @router.get("/{card_id}/prices", response_model=PriceHistoryResponse)
 def get_price_history(
     card_id: str,
@@ -123,10 +140,11 @@ def get_price_history(
     to_date: Optional[date] = Query(None),
 ):
     meta_sql = f"""
-        SELECT id AS card_id, name, rarity, set_id, set_name, variant,
+        SELECT id AS card_id, name, rarity, set_id, set_name,
+            COALESCE(variant, 'normal') as variant,
             image_small, image_large, tcgplayer_url
         FROM read_parquet('{REGISTRY_PATH}')
-        WHERE id = ? AND variant = ?
+        WHERE id = ? AND COALESCE(variant, 'normal') = ?
         LIMIT 1
     """
     meta = cursor.execute(meta_sql, [card_id, variant]).fetchdf()
