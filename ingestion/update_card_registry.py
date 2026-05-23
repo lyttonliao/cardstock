@@ -64,6 +64,7 @@ def enrich(df):
         .reset_index(name="cards_in_rarity_slot")
     )
     df = df.merge(rarity_counts, on=["set_id", "rarity"], how="left")
+    df["cards_in_rarity_slot"] = df["cards_in_rarity_slot"].astype(float)
     df["packs_per_specific_card"] = df["packs_per_slot"] * df["cards_in_rarity_slot"]
     return df
 

@@ -13,7 +13,7 @@ type SearchItem = {
   tags: string[],
 }
 
-export default function SearchForm({ items, onChange, onSelect }: { 
+export default function Autocomplete({ items, onChange, onSelect }: { 
   items: SearchItem[],
   onChange: (val: string) => void,
   onSelect: (item: SearchItem) => void,

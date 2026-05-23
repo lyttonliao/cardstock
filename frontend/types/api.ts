@@ -147,3 +147,13 @@ export interface CardVariantsResponse {
   card_id: string,
   variants: string[],
 }
+
+export interface CardIndex {
+  card_id: string,
+  name: string,
+  variant: string,
+  rarity: string | null,
+  set_id: string,
+  set_name: string,
+  image_small: string,
+}

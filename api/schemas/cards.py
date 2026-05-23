@@ -21,6 +21,15 @@ class CardSummary(BaseModel):
     current_price: Optional[float]
 
 
+class CardIndex(BaseModel):
+    card_id: str
+    name: str
+    rarity: Optional[str]
+    set_id: str
+    set_name: str
+    variant: str
+
+
 class CardListResponse(BaseModel):
     total: int
     page: int

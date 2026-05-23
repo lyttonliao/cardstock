@@ -1,4 +1,6 @@
+"use client"
 import Link from "next/link";
+import SearchDialog from "../SearchDialog/SearchDialog";
 
 export default function NavBar() {
   return (
@@ -10,6 +12,7 @@ export default function NavBar() {
         <Link href="/" className="text-gray-400 hover:text-white text-sm transition-colors">
           Cards
         </Link>
+        <SearchDialog />
       </div>
     </nav>
   )

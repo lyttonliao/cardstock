@@ -32,3 +32,6 @@ urllib3<2
 
 # Object Storage
 boto3>=1.43.0
+
+# AI Search
+algoliasearch>=4,<5
