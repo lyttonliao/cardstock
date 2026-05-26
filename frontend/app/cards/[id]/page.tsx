@@ -1,7 +1,9 @@
 import { redirect, notFound } from "next/navigation";
 import { getCardPrices, getCardVariants, ApiError, predict } from "@/lib/api";
 import { capitalizeStr, formatDate, formatPrice } from "@/lib/utils";
+import { getRarityColor } from "@/lib/rarity";
 import PriceChart from "@/components/PriceChart/PriceChart";
+import Badge from "@/components/Badge/Badge";
 
 function formatPct(decimal: number | undefined): string {
   if (decimal == null) return "—";
@@ -97,13 +99,11 @@ export default async function CardPage({
             <h1 className="font-display text-[24px] font-bold text-fg-1 m-0 tracking-[-0.02em] break-words">
               {`${prices.name} — ${prices.set_name}`}
             </h1>
+            {/* Badges */}
             <div className="flex gap-2 items-center mt-1.5 font-sans">
-              <span className="text-[13px] text-fg-3">{capitalizeStr(prices.variant)}</span>
+              <Badge variant="meta">{capitalizeStr(prices.variant)}</Badge>
               {prices.rarity && (
-                <>
-                  <span className="text-fg-4">•</span>
-                  <span className="text-[13px] text-fg-3">{capitalizeStr(prices.rarity)}</span>
-                </>
+                <Badge variant="meta" color={getRarityColor(prices.rarity)}>{capitalizeStr(prices.rarity)}</Badge>
               )}
             </div>
             {lastMonthlyPrice && (
@@ -258,7 +258,7 @@ export default async function CardPage({
           </div>
         </>
       ) : (
-        <p style={{ color: "var(--fg-4)", fontSize: 13 }}>No prediction data available for this card.</p>
+        <p className="text-fg-4 text-[13px]">No prediction data available for this card.</p>
       )}
     </div>
   );
