@@ -5,7 +5,7 @@ import SearchDialog from "../SearchDialog/SearchDialog";
 
 export default function NavBar() {
   return (
-    <nav className="border-b border-border bg-app sticky top-0 z-10 px-6 py-[14px]">
+    <nav className="border-b border-border bg-app sticky top-0 z-50 px-6 py-[14px]">
       <div className="max-w-[1280px] mx-auto flex items-center gap-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2.5 no-underline">
