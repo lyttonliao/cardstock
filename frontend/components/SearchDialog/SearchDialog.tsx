@@ -127,7 +127,7 @@ export default function SearchDialog() {
               <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
                 {searchResults.map((hit) => (
                   <DialogClose asChild key={`${hit.card_id}_${hit.variant}`}>
-                    <Link href={`/cards/${hit.card_id}?variant=${hit.variant}`} className="no-underline">
+                    <Link href={`/registry/cards/${hit.card_id}?variant=${hit.variant}`} className="no-underline">
                       <li className="flex items-center gap-4 px-12 py-3 rounded-lg cursor-pointer hover:bg-[rgba(51,65,85,0.5)] transition-colors">
                         <div className="w-14 h-[76px] rounded-md bg-surface border border-border shrink-0 overflow-hidden">
                           <img src={hit.image_small} alt="" className="w-full h-full object-cover block" />

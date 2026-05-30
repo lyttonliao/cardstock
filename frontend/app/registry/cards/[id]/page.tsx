@@ -101,9 +101,9 @@ export default async function CardPage({
             </h1>
             {/* Badges */}
             <div className="flex gap-2 items-center mt-1.5 font-sans">
-              <Badge variant="meta">{capitalizeStr(prices.variant)}</Badge>
+              <Badge>{capitalizeStr(prices.variant)}</Badge>
               {prices.rarity && (
-                <Badge variant="meta" color={getRarityColor(prices.rarity)}>{capitalizeStr(prices.rarity)}</Badge>
+                <Badge color={getRarityColor(prices.rarity)}>{capitalizeStr(prices.rarity)}</Badge>
               )}
             </div>
             {lastMonthlyPrice && (

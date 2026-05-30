@@ -5,7 +5,8 @@ import {
   CardPricesSearchParams,
   CardVariantsResponse,
   PredictResponse,
-  ModelInfoResponse
+  ModelInfoResponse,
+  SetListResponse
 } from "../types/api"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL
@@ -25,6 +26,10 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   }
   console.log("API response", JSON.stringify(data).slice(0, 500));
   return data;
+}
+
+export function getSets(): Promise<SetListResponse> {
+  return apiFetch<SetListResponse>('/sets');
 }
 
 export function getCards(params: CardSearchParams): Promise<CardListResponse> {

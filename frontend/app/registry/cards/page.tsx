@@ -1,37 +1,45 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getCards } from "@/lib/api";
 import { CardSummary } from "@/types/api";
 import { capitalizeStr, formatPrice } from "@/lib/utils";
+import Badge from "@/components/Badge/Badge";
+import { getRarityColor } from "@/lib/rarity";
+import { InputGroup } from "@/components/ui/input-group";
+import { Input } from "@/components/ui/input";
 
 const PAGE_SIZE = 20;
 
 export default function CardsPage() {
+  const searchParams = useSearchParams();
+  const setIdParam = searchParams.get("set_id") ?? undefined;
+
   const [cards, setCards] = useState<CardSummary[]>([]);
   const [total, setTotal] = useState<number | null>(null);
-  const [page, setPage] = useState(0);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     setIsLoading(true);
-    getCards({ page: 0, page_size: PAGE_SIZE })
+    getCards({ set_id: setIdParam, page: 1, page_size: PAGE_SIZE })
       .then((res) => {
         setCards(res.items);
         setTotal(res.total);
-        setPage(0);
+        setPage(1);
         setHasMore(res.items.length < res.total);
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [setIdParam]);
 
   function loadMore() {
     const nextPage = page + 1;
     setIsLoadingMore(true);
-    getCards({ page: nextPage, page_size: PAGE_SIZE })
+    getCards({ set_id: setIdParam, page: nextPage, page_size: PAGE_SIZE })
       .then((res) => {
         setCards((prev) => [...prev, ...res.items]);
         setPage(nextPage);
@@ -53,6 +61,8 @@ export default function CardsPage() {
           </p>
         )}
       </div>
+
+      {/* Selects */}
 
       {/* Section header */}
       <div className="flex items-center gap-4 mb-5">
@@ -104,7 +114,7 @@ function CardRow({ card }: { card: CardSummary }) {
   ].filter(Boolean).join(" · ");
 
   return (
-    <Link href={`/cards/${card.card_id}?variant=${card.variant}`} className="no-underline">
+    <Link href={`/registry/cards/${card.card_id}?variant=${card.variant}`} className="no-underline">
       <div className="flex items-center gap-4 px-4 py-[14px] rounded-md border border-border bg-surface hover:bg-[rgba(51,65,85,0.30)] hover:border-border-2 transition-colors cursor-pointer">
         {/* Card thumbnail */}
         <div className="w-12 h-[66px] rounded-md bg-input border border-border shrink-0 overflow-hidden">

@@ -26,6 +26,19 @@ export interface CardSearchParams {
   page_size?: number,
 }
 
+export interface SetSummary {
+  set_id: string,
+  name: string,
+  series: string,
+  image_logo: string | null,
+  image_symbol: string | null,
+}
+
+export interface SetListResponse {
+  total: number,
+  items: SetSummary[],
+}
+
 export interface PricePoint {
   price_date: string,
   monthly_price: number | null,

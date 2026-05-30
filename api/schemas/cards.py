@@ -36,7 +36,6 @@ class CardListResponse(BaseModel):
     page_size: int
     items: list[CardSummary]
 
-
 class PricePoint(BaseModel):
     price_date: date
     monthly_price: Optional[float]

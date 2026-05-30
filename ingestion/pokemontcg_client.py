@@ -8,6 +8,13 @@ API_KEY = os.getenv("POKEMON_TCG_API_KEY")
 BASE_URL = "https://api.pokemontcg.io/v2"
 
 
+def fetch_all_sets():
+    """Returns full set objects (id, series, images) from the API."""
+    response = requests.get(BASE_URL + "/sets", headers={"X-Api-Key": API_KEY})
+    response.raise_for_status()
+    return response.json()["data"]
+
+
 def fetch_all_set_ids():
     """Returns list of all set IDs from the pokemontcg.io API."""
     response = requests.get(BASE_URL + "/sets", headers={"X-Api-Key": API_KEY})
