@@ -1,35 +1,19 @@
 import { redirect, notFound } from "next/navigation";
 import { getCardPrices, getCardVariants, ApiError, predict } from "@/lib/api";
-import { capitalizeStr, formatDate, formatPrice } from "@/lib/utils";
+import {
+  capitalizeStr,
+  formatDate,
+  formatPrice,
+  formatPct,
+  formatLogReturnPct,
+  pctTone,
+  boolTone,
+  fmt,
+} from "@/lib/format";
 import { getRarityColor } from "@/lib/rarity";
 import PriceChart from "@/components/PriceChart/PriceChart";
 import Badge from "@/components/Badge/Badge";
 
-function formatPct(decimal: number | undefined): string {
-  if (decimal == null) return "—";
-  const pct = decimal * 100;
-  return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
-}
-
-function formatLogReturnPct(logReturn: number | undefined): string {
-  if (logReturn == null) return "—";
-  const pct = (Math.exp(logReturn) - 1) * 100;
-  return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
-}
-
-function pctTone(decimal: number | undefined): "up" | "down" | "neutral" {
-  if (decimal == null) return "neutral";
-  return decimal >= 0 ? "up" : "down";
-}
-
-function boolTone(val: boolean | undefined): "up" | "down" | "neutral" {
-  if (val == null) return "neutral";
-  return val ? "up" : "down";
-}
-
-function fmt(val: number | null | undefined, fn: (n: number) => string): string {
-  return val != null ? fn(val) : "—";
-}
 
 function SectionHeader({ title }: { title: string }) {
   return (
@@ -171,12 +155,8 @@ export default async function CardPage({
             <div className="mb-6">
               <SectionHeader title="Momentum" />
               <div className="flex gap-12 flex-wrap">
-                <Stat
-                  label="Price / 3M MA"
-                  value={prediction.momentum.price_momentum_3m != null ? `${prediction.momentum.price_momentum_3m.toFixed(2)}x` : "—"}
-                />
-                <Stat label="vs. 3M MA" value={formatPct(prediction.momentum.price_change_3m_pct)} tone={pctTone(prediction.momentum.price_change_3m_pct)} />
-                <Stat label="vs. 12M MA" value={formatPct(prediction.momentum.price_change_12m_pct)} tone={pctTone(prediction.momentum.price_change_12m_pct)} />
+                <Stat label="vs. 3M MA" value={formatPct(prediction.momentum.price_vs_ma_3m)} tone={pctTone(prediction.momentum.price_vs_ma_3m)} />
+                <Stat label="vs. 12M MA" value={formatPct(prediction.momentum.price_vs_ma_12m)} tone={pctTone(prediction.momentum.price_vs_ma_12m)} />
                 <Stat label="Since Launch" value={formatLogReturnPct(prediction.momentum.price_change_since_launch)} tone={pctTone(prediction.momentum.price_change_since_launch)} />
               </div>
             </div>

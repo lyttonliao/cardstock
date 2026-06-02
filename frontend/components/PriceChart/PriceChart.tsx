@@ -10,7 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { PricePoint } from "@/types/api";
-import { formatDate, formatPrice } from "@/lib/utils";
+import { formatDate, formatPrice } from "@/lib/format";
 
 
 export default function PriceChart({ prices }: { prices: PricePoint[] }) {

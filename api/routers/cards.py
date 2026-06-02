@@ -5,9 +5,9 @@ import pandas as pd
 import duckdb
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from api.constants import REGISTRY_PATH
+from api.constants import REGISTRY_PATH, MODEL_MAE_DOLLARS, MODEL_RMSE_DOLLARS
 from api.dependencies import get_cursor
-from api.schemas.cards import CardListResponse, CardSummary, PriceHistoryResponse, PricePoint
+from api.schemas.cards import CardListResponse, CardSummary, PriceHistoryResponse, PricePoint, MarketAggregatesResponse
 
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -190,4 +190,45 @@ def get_price_history(
             )
             for _, row in prices_df.iterrows()
         ],
+    )
+
+@router.get("/market_aggregates", response_model=MarketAggregatesResponse)
+def get_market_aggregates(
+    cursor: Annotated[duckdb.DuckDBPyConnection, Depends(get_cursor)],
+):
+    # price_Xm_ago columns are already computed by the dbt model via lag() —
+    # summing them on the latest snapshot per card is equivalent to historical market caps.
+    sql = """
+        SELECT
+            COUNT(*)              AS total_cards,
+            MAX(price_date)       AS date,
+            SUM(monthly_price)    AS market_cap,
+            SUM(price_1m_ago)     AS market_cap_1m,
+            SUM(price_3m_ago)     AS market_cap_3m,
+            SUM(price_6m_ago)     AS market_cap_6m,
+            SUM(price_12m_ago)    AS market_cap_12m,
+            SUM(price_60m_ago)    AS market_cap_5y
+        FROM (
+            SELECT monthly_price, price_date, price_1m_ago, price_3m_ago,
+                   price_6m_ago, price_12m_ago, price_60m_ago
+            FROM fct_card_price_features
+            QUALIFY ROW_NUMBER() OVER (PARTITION BY card_id, variant ORDER BY price_date DESC) = 1
+        )
+    """
+    row = cursor.execute(sql).fetchdf().iloc[0]
+
+    def opt(val) -> float | None:
+        return None if pd.isna(val) else round(float(val), 2)
+
+    return MarketAggregatesResponse(
+        total_cards=int(row["total_cards"]),
+        date=row["date"].isoformat(),
+        market_cap=round(float(row["market_cap"]), 2),
+        market_cap_1m=opt(row["market_cap_1m"]),
+        market_cap_3m=opt(row["market_cap_3m"]),
+        market_cap_6m=opt(row["market_cap_6m"]),
+        market_cap_12m=opt(row["market_cap_12m"]),
+        market_cap_5y=opt(row["market_cap_5y"]),
+        mae=MODEL_MAE_DOLLARS,
+        rmse=MODEL_RMSE_DOLLARS,
     )

@@ -11,7 +11,7 @@ import { Search } from "lucide-react";
 import debounce from "lodash/debounce";
 import { algoliaClient, CARDS_INDEX } from "@/lib/algolia";
 import { CardIndex } from "@/types/api";
-import { capitalizeStr } from "@/lib/utils";
+import { capitalizeStr } from "@/lib/format";
 import Link from "next/link";
 import { DialogClose } from "@radix-ui/react-dialog";
 

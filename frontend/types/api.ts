@@ -1,3 +1,5 @@
+// =================== Cards ===================
+
 export interface CardSummary {
   card_id: string,
   name: string,
@@ -26,17 +28,26 @@ export interface CardSearchParams {
   page_size?: number,
 }
 
-export interface SetSummary {
-  set_id: string,
-  name: string,
-  series: string,
-  image_logo: string | null,
-  image_symbol: string | null,
+export interface CardPricesSearchParams {
+  card_id: string,
+  variant: string,
+  from_date?: string,
+  to_date?: string,
 }
 
-export interface SetListResponse {
-  total: number,
-  items: SetSummary[],
+export interface CardVariantsResponse {
+  card_id: string,
+  variants: string[],
+}
+
+export interface CardIndex {
+  card_id: string,
+  name: string,
+  variant: string,
+  rarity: string | null,
+  set_id: string,
+  set_name: string,
+  image_small: string,
 }
 
 export interface PricePoint {
@@ -57,6 +68,36 @@ export interface PriceHistoryResponse {
   prices: PricePoint[],
 }
 
+export interface MarketAggregateResponse {
+  total_cards: number,
+  date: string,
+  market_cap: number,
+  market_cap_1m?: number,
+  market_cap_3m?: number,
+  market_cap_6m?: number,
+  market_cap_12m?: number,
+  market_cap_5y?: number,
+  mae: number,
+  rmse: number,
+}
+
+// =================== Sets ===================
+
+export interface SetSummary {
+  set_id: string,
+  name: string,
+  series: string,
+  image_logo: string | null,
+  image_symbol: string | null,
+}
+
+export interface SetListResponse {
+  total: number,
+  items: SetSummary[],
+}
+
+// =================== Prediction ===================
+
 interface PriceMetrics {
   monthly_price: number | null,
   daily_price: number | null,
@@ -71,8 +112,11 @@ interface MovingAverages {
 }
 
 interface Momentum {
-  price_momentum_3m?: number,
+  price_vs_ma_3m?: number,
+  price_vs_ma_12m?: number,
+  price_change_1m_pct?: number,
   price_change_3m_pct?: number,
+  price_change_6m_pct?: number,
   price_change_12m_pct?: number,
   price_change_since_launch?: number,
 }
@@ -129,6 +173,8 @@ export interface PredictResponse {
   forecast: Forecast,
 }
 
+// =================== Model ===================
+
 interface ModelMetrics {
   mae_dollars: number,
   rmse_dollars: number,
@@ -147,26 +193,4 @@ export interface ModelInfoResponse {
   features: string[],
   train_cutoff: string,
   metrics: ModelMetrics
-}
-
-export interface CardPricesSearchParams {
-  card_id: string,
-  variant: string,
-  from_date?: string,
-  to_date?: string,
-}
-
-export interface CardVariantsResponse {
-  card_id: string,
-  variants: string[],
-}
-
-export interface CardIndex {
-  card_id: string,
-  name: string,
-  variant: string,
-  rarity: string | null,
-  set_id: string,
-  set_name: string,
-  image_small: string,
 }

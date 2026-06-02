@@ -5,11 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getCards } from "@/lib/api";
 import { CardSummary } from "@/types/api";
-import { capitalizeStr, formatPrice } from "@/lib/utils";
-import Badge from "@/components/Badge/Badge";
-import { getRarityColor } from "@/lib/rarity";
-import { InputGroup } from "@/components/ui/input-group";
-import { Input } from "@/components/ui/input";
+import { capitalizeStr, formatPrice } from "@/lib/format";
+
 
 const PAGE_SIZE = 20;
 

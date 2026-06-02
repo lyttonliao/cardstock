@@ -23,9 +23,12 @@ class MovingAverages(BaseModel):
 
 
 class Momentum(BaseModel):
-    price_momentum_3m: Optional[float]      # price / ma_3m
-    price_change_3m_pct: Optional[float]    # (price - ma_3m) / ma_3m
-    price_change_12m_pct: Optional[float]   # (price - ma_12m) / ma_12m
+    price_change_1m_pct: Optional[float]
+    price_change_3m_pct: Optional[float]
+    price_change_6m_pct: Optional[float]
+    price_change_12m_pct: Optional[float]
+    price_vs_ma_3m: Optional[float]    # (price - ma_3m) / ma_3m
+    price_vs_ma_12m: Optional[float]   # (price - ma_12m) / ma_12m
     price_change_since_launch: Optional[float]  # ln(price / launch_price)
 
 
@@ -79,3 +82,16 @@ class PredictResponse(BaseModel):
     trend: TrendRegime
     market_context: MarketContext
     forecast: Forecast
+
+
+class MarketAggregatesResponse(BaseModel):
+    total_cards: int
+    date: str
+    market_cap: float
+    market_cap_1m: Optional[float]
+    market_cap_3m: Optional[float]
+    market_cap_6m: Optional[float]
+    market_cap_12m: Optional[float]
+    market_cap_max: Optional[float]
+    mae: float
+    rmse: float

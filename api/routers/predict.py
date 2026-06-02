@@ -1,11 +1,10 @@
-from datetime import date
-from typing import Annotated, Optional
+from typing import Annotated
 
 import pandas as pd
 import numpy as np
 import duckdb
 import xgboost as xgb
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from api.constants import FEATURES, CATEGORICAL_FEATURES
 from api.dependencies import get_cursor, get_model
@@ -55,7 +54,7 @@ def get_prediction(
         )
 
     r = rows.iloc[0]
-
+    print(r)
     X = rows[FEATURES].copy()
     for col in CATEGORICAL_FEATURES:
         X[col] = X[col].astype("category")
@@ -86,8 +85,11 @@ def get_prediction(
             ma_12m=opt(r["price_ma_12m"]),
         ),
         momentum=Momentum(
-            price_momentum_3m=opt(r["price_momentum_3m"]),
+            price_vs_ma_3m=opt(r["price_vs_ma_3m"]),
+            price_vs_ma_12m=opt(r["price_vs_ma_12m"]),
+            price_change_1m_pct=opt(r["price_change_1m_pct"]),
             price_change_3m_pct=opt(r["price_change_3m_pct"]),
+            price_change_6m_pct=opt(r["price_change_6m_pct"]),
             price_change_12m_pct=opt(r["price_change_12m_pct"]),
             price_change_since_launch=opt(r["price_change_since_launch"]),
         ),
@@ -123,3 +125,5 @@ def get_prediction(
             actual_next_6m_price=opt(r["next_6m_price"]),
         ),
     )
+
+

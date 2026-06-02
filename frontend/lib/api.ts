@@ -6,7 +6,8 @@ import {
   CardVariantsResponse,
   PredictResponse,
   ModelInfoResponse,
-  SetListResponse
+  SetListResponse,
+  MarketAggregateResponse
 } from "../types/api"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL
@@ -24,13 +25,16 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     console.error("API error", res.status, JSON.stringify(data));
     throw new ApiError(res.status, data?.detail ?? res.statusText);
   }
-  console.log("API response", JSON.stringify(data).slice(0, 500));
   return data;
 }
+
+// ========================== Sets ==========================
 
 export function getSets(): Promise<SetListResponse> {
   return apiFetch<SetListResponse>('/sets');
 }
+
+// ========================== Cards ==========================
 
 export function getCards(params: CardSearchParams): Promise<CardListResponse> {
   const query = new URLSearchParams();
@@ -55,6 +59,16 @@ export function getCardPrices(params: CardPricesSearchParams): Promise<PriceHist
   return apiFetch<PriceHistoryResponse>(`/cards/${params.card_id}/prices?${query}`);
 }
 
+export function getCardVariants(cardId: string): Promise<CardVariantsResponse> {
+  return apiFetch<CardVariantsResponse>(`/cards/${cardId}/variants`);
+}
+
+export function getMarketAggregates(): Promise<MarketAggregateResponse>{
+  return apiFetch<MarketAggregateResponse>('/cards/market_aggregates');
+}
+
+// ========================== Predict ==========================
+
 export function predict(cardId: string, variant: string): Promise<PredictResponse> {
   return apiFetch<PredictResponse>('/predict', {
     method: "POST",
@@ -63,9 +77,7 @@ export function predict(cardId: string, variant: string): Promise<PredictRespons
   })
 }
 
-export function getCardVariants(cardId: string): Promise<CardVariantsResponse> {
-  return apiFetch<CardVariantsResponse>(`/cards/${cardId}/variants`);
-}
+// ========================== Model ==========================
 
 export function getModelInfo(): Promise<ModelInfoResponse> {
   return apiFetch<ModelInfoResponse>('/model/info');
