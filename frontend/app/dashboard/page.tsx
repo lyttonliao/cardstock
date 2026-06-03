@@ -89,6 +89,7 @@ export default async function DashboardPage() {
           <LeaderboardTable
             data={predictMovers}
             suffix="pred"
+            title="Top 10 Pred. Movers"
             ariaLabel="Top 10 Prediction Movers"
             columns={[
               { header: "Name", render: (c) => capitalizeStr(c.name), href: (c) => `/registry/cards/${c.card_id}?variant=${c.variant}` },
@@ -116,6 +117,7 @@ export default async function DashboardPage() {
           <LeaderboardTable
             data={actualMovers}
             suffix="actual"
+            title="Top 10 Actual Movers"
             ariaLabel="Top 10 Actual Movers"
             columns={[
               { header: "Name", render: (c) => capitalizeStr(c.name), href: (c) => `/registry/cards/${c.card_id}?variant=${c.variant}` },
