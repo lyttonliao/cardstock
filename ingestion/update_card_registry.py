@@ -2,7 +2,7 @@ import duckdb
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
-from pokemontcg_client import fetch_all_set_ids, fetch_cards_for_set
+from pokemontcg_client import fetch_all_set_ids, fetch_cards_for_set, fetch_all_sets
 from constants import REGISTRY_PATH, MIN_MARKET_PRICE, SPECIALTY_SETS, SET_SLOT_RATES
 
 
@@ -19,14 +19,18 @@ def extract_registry_rows(card):
     if not tcgplayer_url:
         return []
 
+    card_set = card.get("set", {})
     base = {
         "id": card.get("id"),
         "name": card.get("name"),
         "number": card.get("number"),
         "rarity": card.get("rarity"),
-        "set_id": card.get("set", {}).get("id"),
-        "set_name": card.get("set", {}).get("name"),
-        "set_release_date": card.get("set", {}).get("releaseDate"),
+        "set_id": card_set.get("id"),
+        "set_name": card_set.get("name"),
+        "set_series": card_set.get("series"),
+        "set_image_symbol": card_set.get("images", {}).get("symbol"),
+        "set_image_logo": card_set.get("images", {}).get("logo"),
+        "set_release_date": card_set.get("releaseDate"),
         "image_small": card.get("images", {}).get("small"),
         "image_large": card.get("images", {}).get("large"),
         "tcgplayer_url": tcgplayer_url,
@@ -64,6 +68,7 @@ def enrich(df):
         .reset_index(name="cards_in_rarity_slot")
     )
     df = df.merge(rarity_counts, on=["set_id", "rarity"], how="left")
+    df["cards_in_rarity_slot"] = df["cards_in_rarity_slot"].astype(float)
     df["packs_per_specific_card"] = df["packs_per_slot"] * df["cards_in_rarity_slot"]
     return df
 
@@ -76,11 +81,38 @@ def append_to_registry(rows):
     pq.write_table(combined, REGISTRY_PATH)
     return len(combined)
 
+def backfill_null_set_details():
+    """Backfill card registry with fields (series, logo, symbol)."""
+    print("Initiating - backfilling card registry with set details")
+
+    sets = fetch_all_sets()
+
+    rows = [
+        {
+            "set_id": s["id"],
+            "set_series": s.get("series"),
+            "set_image_symbol": s.get("images", {}).get("symbol"),
+            "set_image_logo": s.get("images", {}).get("logo"),
+        }
+        for s in sets
+    ]
+
+    existing_df = pq.read_table(REGISTRY_PATH).to_pandas()
+    updates_df = pd.DataFrame(rows).drop_duplicates("set_id").set_index("set_id")
+
+    for col in ["set_series", "set_image_symbol", "set_image_logo"]:
+        existing_df[col] = existing_df["set_id"].map(updates_df[col])
+
+    pq.write_table(pa.Table.from_pandas(existing_df, preserve_index=False), REGISTRY_PATH)
+
+    print("Completed backfilling card registry with set details")
+    
 
 def backfill_null_price_sets(conn):
     """For sets with null-price placeholder rows, check if the API now has prices.
     If so, remove the placeholders and replace with proper per-variant rows.
     """
+    # set_image_logo column doesn't exist yet — fall back to price-only check
     null_sets = (
         conn.execute(
             f"SELECT DISTINCT set_id FROM '{REGISTRY_PATH}' WHERE tcgplayer_market_price IS NULL"
@@ -115,6 +147,9 @@ def backfill_null_price_sets(conn):
                         "rarity": card.get("rarity"),
                         "set_id": card.get("set", {}).get("id"),
                         "set_name": card.get("set", {}).get("name"),
+                        "set_series": card.get("set", {}).get("series"),
+                        "set_image_symbol": card.get("set", {}).get("images", {}).get("symbol"),
+                        "set_image_logo": card.get("set", {}).get("images", {}).get("logo"),
                         "set_release_date": card.get("set", {}).get("releaseDate"),
                         "image_small": card.get("images", {}).get("small"),
                         "image_large": card.get("images", {}).get("large"),
@@ -127,7 +162,7 @@ def backfill_null_price_sets(conn):
             backfilled.append((set_id, rows))
 
     if not backfilled:
-        print("  No prices available yet for pending sets.")
+        print("No prices available yet for pending sets.")
         return
 
     # Remove placeholder rows for sets that now have prices, then append real rows
@@ -156,7 +191,7 @@ def main():
     )
     print(f"Registry has {len(existing_set_ids)} sets already.")
 
-    # ── Backfill sets that were added without prices ───────────────────────────
+    # ── Backfill sets that were added without prices ──────────────────────────
     backfill_null_price_sets(conn)
 
     # ── Ingest brand new sets ─────────────────────────────────────────────────
@@ -191,4 +226,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    backfill_null_set_details()

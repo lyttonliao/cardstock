@@ -18,7 +18,12 @@ windowed as (
             / nullif(max(monthly_price) over w_3m - min(monthly_price) over w_3m, 0) as stochastic_k_3m,
         monthly_price > avg(monthly_price) over w_3m  as above_ma_3m,
         monthly_price > avg(monthly_price) over w_6m  as above_ma_6m,
-        monthly_price > avg(monthly_price) over w_12m as above_ma_12m
+        monthly_price > avg(monthly_price) over w_12m as above_ma_12m,
+        lag(monthly_price, 1)  over (partition by card_id, variant order by price_date::date) as price_1m_ago,
+        lag(monthly_price, 3)  over (partition by card_id, variant order by price_date::date) as price_3m_ago,
+        lag(monthly_price, 6)  over (partition by card_id, variant order by price_date::date) as price_6m_ago,
+        lag(monthly_price, 12) over (partition by card_id, variant order by price_date::date) as price_12m_ago,
+        lag(monthly_price, 60) over (partition by card_id, variant order by price_date::date) as price_60m_ago,
     from daily
     window
         w_3m  as (partition by card_id, variant order by price_date::date range between interval '3 months'  preceding and current row),
@@ -30,8 +35,13 @@ windowed as (
 enriched as (
     select
         *,
-        (monthly_price - price_ma_3m)  / nullif(price_ma_3m,  0) as price_change_3m_pct,
-        (monthly_price - price_ma_12m) / nullif(price_ma_12m, 0) as price_change_12m_pct,
+        (monthly_price - price_ma_3m)  / nullif(price_ma_3m,  0) as price_vs_ma_3m,
+        (monthly_price - price_ma_6m)  / nullif(price_ma_6m,  0) as price_vs_ma_6m,
+        (monthly_price - price_ma_12m) / nullif(price_ma_12m, 0) as price_vs_ma_12m,
+        (monthly_price - price_1m_ago)  / nullif(price_1m_ago, 0)  as price_change_1m_pct,
+        (monthly_price - price_3m_ago)  / nullif(price_3m_ago, 0)  as price_change_3m_pct,
+        (monthly_price - price_6m_ago)  / nullif(price_6m_ago, 0)  as price_change_6m_pct,
+        (monthly_price - price_12m_ago) / nullif(price_12m_ago, 0) as price_change_12m_pct,
         ln(monthly_price / nullif(launch_price, 0))               as price_change_since_launch,
         -- Normalised volatility: stddev as a % of price so a $2 swing on a $5 card
         -- isn't invisible compared to a $2 swing on a $500 card
@@ -66,7 +76,6 @@ google_trends as (
 
 select
     e.*,
-    case when price_ma_3m > 0 then monthly_price / price_ma_3m end as price_momentum_3m,
     s.days_since_recent_set_release,
     s.hype_weighted_release_90d,
     g.interest_score                                               as pokemon_interest_score,

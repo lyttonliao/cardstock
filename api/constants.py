@@ -21,9 +21,11 @@ FEATURES = [
     "price_6m_high", "price_6m_low",
     # Oscillators
     "stochastic_k_6m", "stochastic_k_3m",
-    # Momentum / velocity
-    "price_momentum_3m", "price_change_3m_pct", "price_change_12m_pct",
+    # Trailing returns (point-to-point)
+    "price_change_1m_pct", "price_change_3m_pct", "price_change_6m_pct", "price_change_12m_pct",
     "price_change_since_launch",
+    # MA deviations
+    "price_vs_ma_3m", "price_vs_ma_6m", "price_vs_ma_12m",
     # Volatility (normalised) and price position
     "price_cv_3m", "price_ath_ratio", "price_vs_set_index",
     # Trend regime
@@ -49,5 +51,5 @@ MODEL_PARAMS = {
 }
 
 # Metrics from the last training run (March 2026 holdout)
-MODEL_MAE_DOLLARS = 4.92
-MODEL_RMSE_DOLLARS = 15.12
+MODEL_MAE_DOLLARS = 4.95
+MODEL_RMSE_DOLLARS = 15.09

@@ -165,7 +165,7 @@ The final feature table — one row per card per month, ~30 columns. Three CTE l
 - Trend flags: `above_ma_3m/6m/12m`
 
 **`enriched`** — second layer required because SQL can't reference window aliases in the same SELECT:
-- `price_change_3m_pct/12m_pct`: how far current price sits from its 3m/12m moving average (momentum)
+- `price_vs_ma_3m/12m_pct`: how far current price sits from its 3m/12m moving average (momentum)
 - `price_change_since_launch`: `ln(monthly_price / launch_price)` — log appreciation since earliest recorded price; 0 at launch, `ln(10) ≈ 2.3` for a 10x card
 - `months_above_ma_12m`: rolling 12-month count of how many months the card stayed above its 12m MA — distinguishes sustained uptrends from brief spikes
 
@@ -189,7 +189,7 @@ At inference time, predictions are converted back to dollars: `predicted_price =
 | Moving averages | `price_ma_3m/6m/12m` |
 | Volatility | `price_stddev_3m` |
 | Range | `price_6m_high/low`, `stochastic_k_6m/3m` |
-| Momentum | `price_momentum_3m`, `price_change_3m_pct`, `price_change_12m_pct`, `price_change_since_launch` |
+| Momentum | `price_momentum_3m`, `price_vs_ma_3m`, `price_vs_ma_12m`, `price_change_since_launch` |
 | Trend regime | `above_ma_3m/6m/12m`, `months_above_ma_12m` |
 | Card fundamentals | `days_since_release`, `is_specialty_set`, `packs_per_specific_card` |
 | Market macro | `days_since_recent_set_release`, `hype_weighted_release_90d`, `pokemon_interest_score` |

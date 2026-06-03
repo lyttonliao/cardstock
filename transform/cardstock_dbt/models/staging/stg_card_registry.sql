@@ -6,7 +6,7 @@ select
     set_id,
     set_name,
     cast(replace(set_release_date, '/', '-') as date) as set_release_date,
-    variant,
+    coalesce(variant, 'normal') as variant,
     image_small,
     image_large,
     tcgplayer_url,

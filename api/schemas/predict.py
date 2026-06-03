@@ -23,9 +23,12 @@ class MovingAverages(BaseModel):
 
 
 class Momentum(BaseModel):
-    price_momentum_3m: Optional[float]      # price / ma_3m
-    price_change_3m_pct: Optional[float]    # (price - ma_3m) / ma_3m
-    price_change_12m_pct: Optional[float]   # (price - ma_12m) / ma_12m
+    price_change_1m_pct: Optional[float]
+    price_change_3m_pct: Optional[float]
+    price_change_6m_pct: Optional[float]
+    price_change_12m_pct: Optional[float]
+    price_vs_ma_3m: Optional[float]    # (price - ma_3m) / ma_3m
+    price_vs_ma_12m: Optional[float]   # (price - ma_12m) / ma_12m
     price_change_since_launch: Optional[float]  # ln(price / launch_price)
 
 
@@ -79,3 +82,20 @@ class PredictResponse(BaseModel):
     trend: TrendRegime
     market_context: MarketContext
     forecast: Forecast
+
+
+class MoverCardSummary(BaseModel):
+    card_id: str
+    name: str
+    variant: str
+    rarity: Optional[str]
+    set_id: str
+    set_name: str
+    monthly_price: float
+    log_return_3m: float
+    pred_3m: float
+
+
+class MoversListResponse(BaseModel):
+    gainers: list[MoverCardSummary]
+    losers: list[MoverCardSummary]

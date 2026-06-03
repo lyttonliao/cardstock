@@ -21,6 +21,15 @@ class CardSummary(BaseModel):
     current_price: Optional[float]
 
 
+class CardIndex(BaseModel):
+    card_id: str
+    name: str
+    rarity: Optional[str]
+    set_id: str
+    set_name: str
+    variant: str
+
+
 class CardListResponse(BaseModel):
     total: int
     page: int
@@ -41,4 +50,36 @@ class PriceHistoryResponse(BaseModel):
     rarity: Optional[str]
     set_id: str
     set_name: str
+    image_small: str
+    image_large: str
     prices: list[PricePoint]
+
+
+class MarketAggregatesResponse(BaseModel):
+    total_cards: int
+    date: str
+    market_cap: float
+    market_cap_1m: Optional[float]
+    market_cap_3m: Optional[float]
+    market_cap_6m: Optional[float]
+    market_cap_12m: Optional[float]
+    market_cap_5y: Optional[float]
+    mae: float
+    rmse: float
+
+
+class MoverCardSummary(BaseModel):
+    card_id: str
+    name: str
+    variant: str
+    rarity: Optional[str]
+    set_id: str
+    set_name: str
+    monthly_price: float
+    monthly_price_3m_ago: float
+    return_3m: float
+
+
+class MoversListResponse(BaseModel):
+    gainers: list[MoverCardSummary]
+    losers: list[MoverCardSummary]

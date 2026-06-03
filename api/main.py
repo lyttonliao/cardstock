@@ -2,10 +2,12 @@ from contextlib import asynccontextmanager
 import duckdb
 import xgboost as xgb
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 
 from api.constants import DB_PATH, MODEL_PATH
 from api.dependencies import set_db_conn, set_model
-from api.routers import cards, predict, model
+from api.routers import cards, predict, model, sets
 
 from pipeline.s3 import download
 from core.config import settings
@@ -41,6 +43,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(cards.router)
 app.include_router(predict.router)
 app.include_router(model.router)
+app.include_router(sets.router)

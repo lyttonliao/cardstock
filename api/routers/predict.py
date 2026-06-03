@@ -1,11 +1,10 @@
-from datetime import date
-from typing import Annotated, Optional
+from typing import Annotated
 
 import pandas as pd
 import numpy as np
 import duckdb
 import xgboost as xgb
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 
 from api.constants import FEATURES, CATEGORICAL_FEATURES
 from api.dependencies import get_cursor, get_model
@@ -19,6 +18,7 @@ from api.schemas.predict import (
     Volatility,
     TrendRegime,
     Forecast,
+    MoversListResponse, MoverCardSummary
 )
 
 router = APIRouter(prefix="/predict", tags=["predict"])
@@ -55,7 +55,6 @@ def get_prediction(
         )
 
     r = rows.iloc[0]
-
     X = rows[FEATURES].copy()
     for col in CATEGORICAL_FEATURES:
         X[col] = X[col].astype("category")
@@ -86,8 +85,11 @@ def get_prediction(
             ma_12m=opt(r["price_ma_12m"]),
         ),
         momentum=Momentum(
-            price_momentum_3m=opt(r["price_momentum_3m"]),
+            price_vs_ma_3m=opt(r["price_vs_ma_3m"]),
+            price_vs_ma_12m=opt(r["price_vs_ma_12m"]),
+            price_change_1m_pct=opt(r["price_change_1m_pct"]),
             price_change_3m_pct=opt(r["price_change_3m_pct"]),
+            price_change_6m_pct=opt(r["price_change_6m_pct"]),
             price_change_12m_pct=opt(r["price_change_12m_pct"]),
             price_change_since_launch=opt(r["price_change_since_launch"]),
         ),
@@ -123,3 +125,48 @@ def get_prediction(
             actual_next_6m_price=opt(r["next_6m_price"]),
         ),
     )
+
+@router.get("/movers", response_model=MoversListResponse)
+def get_movers(
+    cursor: Annotated[duckdb.DuckDBPyConnection, Depends(get_cursor)],
+    model: Annotated[xgb.XGBRegressor, Depends(get_model)],
+):
+    feature_cols = ", ".join(FEATURES)
+    cards_sql = f"""
+        SELECT card_id, name, rarity, set_id, set_name, variant, {feature_cols}
+        FROM fct_card_price_features
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY card_id, variant ORDER BY price_date DESC) = 1
+    """
+    rows = cursor.execute(cards_sql).fetchdf()
+    if rows.empty:
+        raise HTTPException(status_code=404, detail="No card data found")
+
+    X = rows[FEATURES].copy()
+    for col in CATEGORICAL_FEATURES:
+        X[col] = X[col].astype("category")
+    rows["log_return"] = model.predict(X)
+
+    def opt(val):
+        return None if pd.isna(val) else val
+
+    def to_mover(card) -> MoverCardSummary:
+        return MoverCardSummary(
+            card_id=card.card_id,
+            name=card.name,
+            variant=card.variant,
+            rarity=opt(card.rarity),
+            set_id=card.set_id,
+            set_name=card.set_name,
+            monthly_price=float(card.monthly_price),
+            log_return_3m=float(card.log_return),
+            pred_3m=round(card.monthly_price * np.exp(card.log_return), 2)
+        )
+
+    gainers = [to_mover(r) for r in rows.nlargest(10, "log_return").itertuples()]
+    losers  = [to_mover(r) for r in rows.nsmallest(10, "log_return").itertuples()]
+    
+    return MoversListResponse(
+        gainers=gainers,
+        losers=losers
+    )
+     
