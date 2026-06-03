@@ -72,11 +72,11 @@ export default async function CardPage({
   return (
     <div className="font-display">
       {/* Card header */}
-      <div className="flex gap-8 mb-12">
+      <div className="flex flex-col md:flex-row gap-8 mb-12">
         <img
           src={prices.image_large}
           alt=""
-          className="w-[300px] rounded-[20px] shadow-card self-start shrink-0"
+          className="w-[300px] rounded-[20px] shadow-card self-center md:self-start shrink-0"
         />
         <div className="flex flex-col gap-6 pt-2 flex-1">
           <div>

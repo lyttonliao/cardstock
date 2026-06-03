@@ -7,7 +7,9 @@ import {
   PredictResponse,
   ModelInfoResponse,
   SetListResponse,
-  MarketAggregateResponse
+  MarketAggregateResponse,
+  PredictionMoversResponse,
+  ActualMoversResponse
 } from "../types/api"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL
@@ -67,6 +69,10 @@ export function getMarketAggregates(): Promise<MarketAggregateResponse>{
   return apiFetch<MarketAggregateResponse>('/cards/market_aggregates');
 }
 
+export function getActualMovers(): Promise<ActualMoversResponse>{
+  return apiFetch<ActualMoversResponse>('/cards/movers');
+}
+
 // ========================== Predict ==========================
 
 export function predict(cardId: string, variant: string): Promise<PredictResponse> {
@@ -75,6 +81,10 @@ export function predict(cardId: string, variant: string): Promise<PredictRespons
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ card_id: cardId, variant }),
   })
+}
+
+export function getPredictionMovers(): Promise<PredictionMoversResponse> {
+  return apiFetch<PredictionMoversResponse>('/predict/movers');
 }
 
 // ========================== Model ==========================

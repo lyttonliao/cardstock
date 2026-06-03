@@ -81,6 +81,23 @@ export interface MarketAggregateResponse {
   rmse: number,
 }
 
+export interface ActualMover {
+  card_id: string,
+  name: string,
+  variant: string,
+  rarity?: string | null,
+  set_id: string,
+  set_name: string,
+  monthly_price: number,
+  monthly_price_3m_ago: number,
+  return_3m: number,
+}
+
+export interface ActualMoversResponse {
+  gainers: ActualMover[],
+  losers: ActualMover[],
+}
+
 // =================== Sets ===================
 
 export interface SetSummary {
@@ -171,6 +188,23 @@ export interface PredictResponse {
   trend: TrendRegime,
   market_context: MarketContext,
   forecast: Forecast,
+}
+
+export interface PredictMovers {
+  card_id: string,
+  name: string,
+  variant: string,
+  rarity: string | null,
+  set_id: string,
+  set_name: string,
+  monthly_price: number,
+  log_return_3m: number,
+  pred_3m: number,
+}
+
+export interface PredictionMoversResponse {
+  gainers: PredictMovers[],
+  losers: PredictMovers[],
 }
 
 // =================== Model ===================

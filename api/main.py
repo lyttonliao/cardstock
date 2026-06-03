@@ -15,8 +15,8 @@ from core.config import settings
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Download files from S3 at startup before the app serves requests
-    # if settings.s3_bucket:
-    #     download(["registry", "duckdb", "model"])
+    if settings.s3_bucket:
+        download(["registry", "duckdb", "model"])
 
     # Open a single read-only DuckDB connection shared across all requests.
     # read_only=True allows multiple processes to open the same .duckdb file.

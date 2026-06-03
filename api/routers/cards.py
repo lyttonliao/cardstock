@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.constants import REGISTRY_PATH, MODEL_MAE_DOLLARS, MODEL_RMSE_DOLLARS
 from api.dependencies import get_cursor
-from api.schemas.cards import CardListResponse, CardSummary, PriceHistoryResponse, PricePoint, MarketAggregatesResponse
+from api.schemas.cards import CardListResponse, CardSummary, PriceHistoryResponse, PricePoint, MarketAggregatesResponse, MoversListResponse, MoverCardSummary
 
 
 router = APIRouter(prefix="/cards", tags=["cards"])
@@ -231,4 +231,49 @@ def get_market_aggregates(
         market_cap_5y=opt(row["market_cap_5y"]),
         mae=MODEL_MAE_DOLLARS,
         rmse=MODEL_RMSE_DOLLARS,
+    )
+
+@router.get("/movers", response_model=MoversListResponse)
+def get_movers(
+    cursor: Annotated[duckdb.DuckDBPyConnection, Depends(get_cursor)]
+):
+    sql = """
+        SELECT
+            card_id,
+            name,
+            variant,
+            rarity,
+            set_id,
+            set_name,
+            monthly_price,
+            price_3m_ago,
+            (monthly_price - price_3m_ago) / price_3m_ago as return_3m
+        FROM fct_card_price_features
+        WHERE price_3m_ago IS NOT NULL AND monthly_price IS NOT NULL
+        QUALIFY ROW_NUMBER() OVER (PARTITION BY card_id, variant ORDER BY price_date DESC) = 1
+    """
+    rows = cursor.execute(sql).fetchdf()
+
+    def opt(val):
+        return None if pd.isna(val) else val
+
+    def to_mover(card) -> MoverCardSummary:
+        return MoverCardSummary(
+            card_id=card.card_id,
+            name=card.name,
+            variant=card.variant,
+            rarity=opt(card.rarity),
+            set_id=card.set_id,
+            set_name=card.set_name,
+            monthly_price=card.monthly_price,
+            monthly_price_3m_ago = card.price_3m_ago,
+            return_3m=card.return_3m,
+        )
+    
+    gainers = [to_mover(c) for c in rows.nlargest(10, "return_3m").itertuples()]
+    losers = [to_mover(c) for c in rows.nsmallest(10, "return_3m").itertuples()]
+
+    return MoversListResponse(
+        gainers=gainers,
+        losers=losers,
     )

@@ -4,6 +4,7 @@ import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NavBar from "@/components/NavBar/NavBar";
 import Footer from "@/components/Footer/Footer";
+import { ScrollToTop } from "./_components/ScrollToTop";
 
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`dark ${inter.variable} ${rubik.variable} ${geist.variable} ${geistMono.variable}`}>
       <body>
         <TooltipProvider>
+          <ScrollToTop />
           <NavBar />
           <main className="flex-1 max-w-[1280px] mx-auto w-full px-6 py-8">
             {children}

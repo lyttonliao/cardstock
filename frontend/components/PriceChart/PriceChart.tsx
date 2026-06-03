@@ -22,7 +22,7 @@ export default function PriceChart({ prices }: { prices: PricePoint[] }) {
     }));
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
+    <ResponsiveContainer width="100%" height={300} minWidth={400}>
       <LineChart data={data} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.10)" />
         <XAxis

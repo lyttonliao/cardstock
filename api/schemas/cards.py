@@ -55,25 +55,6 @@ class PriceHistoryResponse(BaseModel):
     prices: list[PricePoint]
 
 
-class MoverSummary(BaseModel):
-    card_id: str
-    name: str
-    variant: str
-    rarity: Optional[str]
-    set_id: str
-    set_name: str
-    current_price: float
-    price_change_1m_pct: Optional[float]
-    price_change_3m_pct: Optional[float]
-    price_change_6m_pct: Optional[float]
-    price_change_12m_pct: Optional[float]
-
-
-class MoversResponse(BaseModel):
-    total: int
-    items: list[MoverSummary]
-
-
 class MarketAggregatesResponse(BaseModel):
     total_cards: int
     date: str
@@ -85,3 +66,20 @@ class MarketAggregatesResponse(BaseModel):
     market_cap_5y: Optional[float]
     mae: float
     rmse: float
+
+
+class MoverCardSummary(BaseModel):
+    card_id: str
+    name: str
+    variant: str
+    rarity: Optional[str]
+    set_id: str
+    set_name: str
+    monthly_price: float
+    monthly_price_3m_ago: float
+    return_3m: float
+
+
+class MoversListResponse(BaseModel):
+    gainers: list[MoverCardSummary]
+    losers: list[MoverCardSummary]
