@@ -89,13 +89,11 @@ export default async function DashboardPage() {
           <LeaderboardTable
             data={predictMovers}
             suffix="pred"
-            title="Top 10 Pred. Movers"
             ariaLabel="Top 10 Prediction Movers"
             columns={[
               { header: "Name", render: (c) => capitalizeStr(c.name), href: (c) => `/registry/cards/${c.card_id}?variant=${c.variant}` },
-              { header: "Set", render: (c) => capitalizeStr(c.set_name) },
-              { header: "Variant", render: (c) => capitalizeStr(c.variant) },
-              { header: "Rarity", render: (c) => c.rarity ? capitalizeStr(c.rarity) : "Normal" },
+              { header: "Set", render: (c) => `${capitalizeStr(c.set_name)} (${capitalizeStr(c.variant)})` },
+              { header: "Rarity", render: (c) => c.rarity ? capitalizeStr(c.rarity) : "—" },
               { header: "Price", render: (c) => formatPrice(c.monthly_price) },
               {
                 header: "Pred. Return",
@@ -118,13 +116,11 @@ export default async function DashboardPage() {
           <LeaderboardTable
             data={actualMovers}
             suffix="actual"
-            title="Top 10 Actual Movers"
             ariaLabel="Top 10 Actual Movers"
             columns={[
               { header: "Name", render: (c) => capitalizeStr(c.name), href: (c) => `/registry/cards/${c.card_id}?variant=${c.variant}` },
-              { header: "Set", render: (c) => capitalizeStr(c.set_name) },
-              { header: "Variant", render: (c) => capitalizeStr(c.variant) },
-              { header: "Rarity", render: (c) => c.rarity ? capitalizeStr(c.rarity) : "Normal" },
+              { header: "Set", render: (c) => `${capitalizeStr(c.set_name)} (${capitalizeStr(c.variant)})` },
+              { header: "Rarity", render: (c) => c.rarity ? capitalizeStr(c.rarity) : "—" },
               { header: "Price 3M Ago", render: (c) => formatPrice(c.monthly_price_3m_ago) },
               {
                 header: "Price",
