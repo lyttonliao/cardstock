@@ -5,6 +5,7 @@ import {
   DialogPortal,
   DialogContent,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "radix-ui";
 import { Search } from "lucide-react";
@@ -103,14 +104,14 @@ export default function SearchDialog() {
 
       <DialogPortal>
         <DialogContent
-          className="bg-elevated rounded-[24px] border border-border p-0 w-[min(800px,calc(100vw-32px))] sm:max-w-none shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] top-[15%] translate-y-0"
+          className="bg-elevated rounded-[24px] border border-border p-0 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] top-4 md:top-[15%] translate-y-0 flex flex-col"
           aria-describedby={undefined}
           showCloseButton={false}
         >
           <VisuallyHidden.Root><DialogTitle /></VisuallyHidden.Root>
 
           {/* Input row */}
-          <div className="flex items-center gap-3 px-[18px] h-14 border-b border-border">
+          <div className="flex items-center gap-3 px-[18px] h-14 border-b border-border shrink-0">
             <Search size={16} strokeWidth={1.5} className="text-fg-3 shrink-0" />
             <input
               autoFocus
@@ -122,7 +123,7 @@ export default function SearchDialog() {
           </div>
 
           {/* Results */}
-          <div className="py-3 max-h-[520px] overflow-y-auto">
+          <div className="py-3 overflow-y-auto md:max-h-[520px]">
             {searchResults.length > 0 ? (
               <ul className="list-none p-0 m-0 flex flex-col gap-0.5">
                 {searchResults.map((hit) => (
@@ -164,6 +165,9 @@ export default function SearchDialog() {
               </p>
             )}
           </div>
+          <DialogFooter className="px-8 py-4 text-end border-t border-border">
+            <p className="text-[13px] text-fg-3 font-display">Search by algolia</p>
+          </DialogFooter>
         </DialogContent>
       </DialogPortal>
     </Dialog>
