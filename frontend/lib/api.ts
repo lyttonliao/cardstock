@@ -22,12 +22,16 @@ export class ApiError extends Error {
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, options);
-  const data = await res.json();
   if (!res.ok) {
-    console.error("API error", res.status, JSON.stringify(data));
-    throw new ApiError(res.status, data?.detail ?? res.statusText);
+    let detail = res.statusText;
+    try {
+      const data = await res.json();
+      detail = data?.detail ?? res.statusText;
+    } catch {}
+    console.error("API error", res.status, detail);
+    throw new ApiError(res.status, detail);
   }
-  return data;
+  return res.json();
 }
 
 // ========================== Sets ==========================
