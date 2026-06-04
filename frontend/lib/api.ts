@@ -12,7 +12,12 @@ import {
   ActualMoversResponse
 } from "../types/api"
 
-const BASE = process.env.NEXT_PUBLIC_API_URL
+// Server components call the backend directly (server-to-server HTTP is fine).
+// Client components go through the /api proxy route to avoid mixed-content blocks.
+const BASE =
+  typeof window === "undefined"
+    ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "")
+    : (process.env.NEXT_PUBLIC_API_URL ?? "");
 
 export class ApiError extends Error {
   constructor(public status: number, public detail: string) {
