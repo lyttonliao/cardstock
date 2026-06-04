@@ -54,3 +54,8 @@ app.include_router(cards.router)
 app.include_router(predict.router)
 app.include_router(model.router)
 app.include_router(sets.router)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
