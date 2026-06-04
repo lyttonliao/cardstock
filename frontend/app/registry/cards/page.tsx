@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getCards } from "@/lib/api";
@@ -11,6 +11,14 @@ import { capitalizeStr, formatPrice } from "@/lib/format";
 const PAGE_SIZE = 20;
 
 export default function CardsPage() {
+  return (
+    <Suspense>
+      <CardsPageContent />
+    </Suspense>
+  );
+}
+
+function CardsPageContent() {
   const searchParams = useSearchParams();
   const setIdParam = searchParams.get("set_id") ?? undefined;
 
