@@ -72,7 +72,19 @@ export default async function CardPage({
   return (
     <div className="font-display">
       {/* Card header */}
-      <div className="flex flex-col md:flex-row gap-8 mb-12">
+      <div className="flex flex-col items-center md:hidden mb-4 md:mb-0">
+        <h1 className="font-display text-[24px] font-bold text-fg-1 m-0 tracking-[-0.02em] break-words">
+          {`${prices.name} — ${prices.set_name}`}
+        </h1>
+        {/* Badges */}
+        <div className="flex gap-2 items-center mt-1.5 font-sans">
+          <Badge>{capitalizeStr(prices.variant)}</Badge>
+          {prices.rarity && (
+            <Badge color={getRarityColor(prices.rarity)}>{capitalizeStr(prices.rarity)}</Badge>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-col md:flex-row items-center gap-8 mb-12">
         <img
           src={prices.image_large}
           alt=""
@@ -80,11 +92,11 @@ export default async function CardPage({
         />
         <div className="flex flex-col gap-6 pt-2 flex-1">
           <div>
-            <h1 className="font-display text-[24px] font-bold text-fg-1 m-0 tracking-[-0.02em] break-words">
+            <h1 className="hidden md:block font-display text-[24px] font-bold text-fg-1 m-0 tracking-[-0.02em] break-words">
               {`${prices.name} — ${prices.set_name}`}
             </h1>
             {/* Badges */}
-            <div className="flex gap-2 items-center mt-1.5 font-sans">
+            <div className="hidden md:flex gap-2 items-center mt-1.5 font-sans">
               <Badge>{capitalizeStr(prices.variant)}</Badge>
               {prices.rarity && (
                 <Badge color={getRarityColor(prices.rarity)}>{capitalizeStr(prices.rarity)}</Badge>

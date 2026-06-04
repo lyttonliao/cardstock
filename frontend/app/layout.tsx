@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Inter, Rubik } from "next/font/google";
 import "./globals.css";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NavBar from "@/components/NavBar/NavBar";
+import BottomNav from "@/components/BottomNav/BottomNav";
 import Footer from "@/components/Footer/Footer";
 import { ScrollToTop } from "./_components/ScrollToTop";
 
@@ -27,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <main className="flex-1 max-w-[1280px] mx-auto w-full px-6 py-8">
             {children}
           </main>
+          <BottomNav />
           <Footer />
         </TooltipProvider>
       </body>
