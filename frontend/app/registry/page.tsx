@@ -42,9 +42,9 @@ export default function SetsPage() {
   return (
     <div className="space-y-10">
       {/* Header row */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-0">
         <h1 className="font-display text-[26px] font-bold text-fg-1">Set Registry</h1>
-        <div className="relative w-[260px]">
+        <div className="relative w-full md:w-[260px]">
           <Search size={14} strokeWidth={1.5} className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-3 pointer-events-none" />
           <input
             onChange={(e) => handleUpdateQuery(e.target.value)}
