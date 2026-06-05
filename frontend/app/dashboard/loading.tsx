@@ -8,11 +8,12 @@ export default function DashboardLoading() {
           </h2>
           <div className="h-px flex-1 bg-border" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <div className="h-[130px] w-[300px] bg-elevated rounded-xl border border-border"></div>
-          <div className="h-[130px] w-[300px] bg-elevated rounded-xl border border-border"></div>
-          <div className="h-[130px] w-[300px] bg-elevated rounded-xl border border-border"></div>
-          <div className="h-[130px] w-[300px] bg-elevated rounded-xl border border-border"></div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="h-[130px] bg-elevated rounded-xl border border-border"></div>
+          <div className="h-[130px] bg-elevated rounded-xl border border-border"></div>
+          <div className="h-[130px] bg-elevated rounded-xl border border-border"></div>
+          <div className="h-[130px] bg-elevated rounded-xl border border-border"></div>
+          <div className="h-[130px] bg-elevated rounded-xl border border-border"></div>
         </div>
       </div>
       <div>
@@ -23,8 +24,8 @@ export default function DashboardLoading() {
           <div className="h-px flex-1 bg-border" />
         </div>
         <div className="flex flex-col md:flex-row gap-8">
-          <div className="h-[600px] w-1/2 bg-elevated" />
-          <div className="h-[600px] w-1/2 bg-elevated" />
+          <div className="h-[600px] w-full md:w-1/2 bg-elevated rounded-xl" />
+          <div className="h-[600px] w-full md:w-1/2 bg-elevated rounded-xl" />
         </div>
       </div>
     </div>

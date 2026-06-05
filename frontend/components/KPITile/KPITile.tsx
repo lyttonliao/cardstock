@@ -17,7 +17,7 @@ export default function KPITile({ title, subtitle, context, subtitleTone, contex
     <div className="p-6 border border-border rounded-xl bg-surface">
       <div className="flex flex-col gap-1">
         <p className="text-[13px] text-fg-4 font-display font-semibold">{title}</p>
-        <h1 className={`text-3xl font-mono font-bold ${subtitleClass}`}>{subtitle}</h1>
+        <h1 className={`text-xl md:text-2xl lg:text-3xl font-mono font-bold ${subtitleClass}`}>{subtitle}</h1>
         {context && (
           <p className={`text-xs font-mono text-fg-3 ${contextClass}`}>{context}</p>
         )}
