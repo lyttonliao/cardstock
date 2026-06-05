@@ -16,6 +16,7 @@ const rubik = Rubik({ subsets: ["latin"], variable: "--font-display" });
 export const metadata: Metadata = {
   title: "Cardstock",
   description: "Pokemon TCG card price prediction",
+  icons: { icon: "/logo-mark.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
