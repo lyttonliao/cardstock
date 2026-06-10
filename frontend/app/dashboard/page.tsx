@@ -47,7 +47,7 @@ export default async function DashboardPage() {
           </h2>
           <div className="h-px flex-1 bg-border"/>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4">
           <KPITile
             title="Market Cap"
             subtitle={formatRoundedPrice(aggregates.market_cap)}

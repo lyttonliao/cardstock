@@ -16,11 +16,8 @@ export default function NavBar() {
         </Link>
 
         {/* Nav links */}
-        <Link href="/dashboard" className="text-[13px] text-fg-3 hover:text-fg-1 no-underline transition-colors">Dashboard</Link>
-        <Link href="/registry" className="text-[13px] text-fg-3 hover:text-fg-1 no-underline transition-colors">Registry</Link>
-        {/* <Link href="#" onClick={(e) => e.preventDefault()} className="text-[13px] text-fg-3 hover:text-fg-1 no-underline transition-colors">Watchlist</Link>
-        <Link href="#" onClick={(e) => e.preventDefault()} className="text-[13px] text-fg-3 hover:text-fg-1 no-underline transition-colors">Model</Link> */}
-
+        <Link href="/dashboard" className="hidden md:block text-[13px] text-fg-3 hover:text-fg-1 no-underline transition-colors">Dashboard</Link>
+        <Link href="/registry" className="hidden md:block text-[13px] text-fg-3 hover:text-fg-1 no-underline transition-colors">Registry</Link>
         <span className="flex-1" />
 
         {/* Search trigger */}
