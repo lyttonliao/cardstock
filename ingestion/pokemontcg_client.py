@@ -16,12 +16,12 @@ def _get(url: str, retries: int = 4, backoff: float = 2.0) -> requests.Response 
     """GET with exponential backoff retry. Returns None if all attempts fail."""
     for attempt in range(retries + 1):
         try:
-            response = requests.get(url, headers=_headers, timeout=30)
+            response = requests.get(url, headers=_headers, timeout=60)
             if response.status_code in _RETRY_STATUS and attempt < retries:
                 time.sleep(backoff ** attempt)
                 continue
             return response
-        except requests.exceptions.ConnectionError:
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
             if attempt < retries:
                 time.sleep(backoff ** attempt)
                 continue
