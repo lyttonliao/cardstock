@@ -6,4 +6,3 @@ mlruns/
 __pycache__/
 *.pyc
 ml/models/
-.claude/*
