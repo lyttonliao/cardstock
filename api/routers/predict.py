@@ -60,7 +60,7 @@ def get_prediction(
         X[col] = X[col].astype("category")
     log_return = float(model.predict(X)[0])
     monthly_price = float(r["monthly_price"])
-    predicted_3m = round(monthly_price * np.exp(log_return), 2)
+    predicted_1m = round(monthly_price * np.exp(log_return), 2)
 
     def opt(val):
         return None if pd.isna(val) else val
@@ -116,10 +116,11 @@ def get_prediction(
             days_since_release=opt(r["days_since_release"]),
             is_specialty_set=bool(r["is_specialty_set"]),
             packs_per_specific_card=opt(r["packs_per_specific_card"]),
+            daily_day_count=opt(r["daily_day_count"]),
         ),
         forecast=Forecast(
-            predicted_3m_price=predicted_3m,
-            log_return_3m=round(log_return, 6),
+            predicted_1m_price=predicted_1m,
+            log_return_1m=round(log_return, 6),
             actual_next_1m_price=opt(r["next_1m_price"]),
             actual_next_3m_price=opt(r["next_3m_price"]),
             actual_next_6m_price=opt(r["next_6m_price"]),
@@ -158,8 +159,8 @@ def get_movers(
             set_id=card.set_id,
             set_name=card.set_name,
             monthly_price=float(card.monthly_price),
-            log_return_3m=float(card.log_return),
-            pred_3m=round(card.monthly_price * np.exp(card.log_return), 2)
+            log_return_1m=float(card.log_return),
+            pred_1m=round(card.monthly_price * np.exp(card.log_return), 2)
         )
 
     gainers = [to_mover(r) for r in rows.nlargest(10, "log_return").itertuples()]

@@ -119,15 +119,32 @@ export default async function CardPage({
 
       {prediction ? (
         <>
+          {/* Low TCGPlayer presence notice */}
+          {(prediction.market_context.daily_day_count == null || prediction.market_context.daily_day_count < 8) && (
+            <div className="mb-8 flex items-start gap-3 rounded-lg border border-border bg-surface-2 px-4 py-3 font-sans">
+              <span className="mt-0.5 text-fg-3 shrink-0">⚠</span>
+              <div>
+                <p className="text-[13px] font-medium text-fg-2">
+                  {prediction.market_context.daily_day_count == null || prediction.market_context.daily_day_count === 0
+                    ? "No TCGPlayer market data"
+                    : `Limited TCGPlayer data (${prediction.market_context.daily_day_count} day${prediction.market_context.daily_day_count === 1 ? "" : "s"} this month)`}
+                </p>
+                <p className="text-[12px] text-fg-4 mt-0.5">
+                  This card may be primarily traded on eBay or other platforms. Price data and model predictions may be less reliable.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Forecast — most prominent */}
           <div className="mb-12">
             <SectionHeader title="Forecast" />
             <div className="flex gap-12 flex-wrap">
-              <Stat label="Predicted 3M Price" value={formatPrice(prediction.forecast.predicted_3m_price)} />
+              <Stat label="Predicted 1M Price" value={formatPrice(prediction.forecast.predicted_1m_price)} />
               <Stat
-                label="Expected 3M Return"
-                value={formatLogReturnPct(prediction.forecast.log_return_3m)}
-                tone={pctTone(prediction.forecast.log_return_3m)}
+                label="Expected 1M Return"
+                value={formatLogReturnPct(prediction.forecast.log_return_1m)}
+                tone={pctTone(prediction.forecast.log_return_1m)}
               />
               {prediction.forecast.actual_next_1m_price != null && (
                 <Stat label="Actual 1M Price" value={formatPrice(prediction.forecast.actual_next_1m_price)} />

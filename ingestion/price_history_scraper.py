@@ -133,14 +133,20 @@ def fetch_price_history(url):
         log.error(f"Error fetching {url}: {e}")
         return None
 
-def extract_nm_prices(chart_data, card_id, scraped_at, variant):
-    """Return list of {date, price} from chart_data['used'] (raw card, near mint price)"""
+def extract_nm_prices(chart_data, card_id, scraped_at, variant, after_date=None):
+    """Return list of {date, price} from chart_data['used'] (raw card, near mint price).
+
+    after_date: if provided, only return rows with date > after_date. Used on
+    incremental runs to append only new months without duplicating existing rows.
+    """
 
     rows = []
     for timestamp_ms, price_cents in chart_data.get("used", []):
         if price_cents == 0:
             continue
         date = datetime.fromtimestamp(timestamp_ms / 1000, tz=timezone.utc).strftime("%Y-%m-%d")
+        if after_date and date <= after_date:
+            continue
         price = round(price_cents / 100, 2)
         rows.append({"id": card_id, "variant": variant, "date": date, "price": price, "scraped_at": scraped_at})
     return rows
@@ -155,16 +161,26 @@ def main():
     price_history_path = "data/prices/price_history.parquet"
     os.makedirs("data/prices", exist_ok=True)
 
-    # check cards that have already been scraped
+    # Build a map of (card_id, variant) -> latest price date already stored.
+    # On incremental runs we skip cards that already have the current month's price,
+    # and only append rows newer than what's stored for cards that are stale.
+    current_month = datetime.now(tz=timezone.utc).strftime("%Y-%m-01")
+    latest_date_map: dict[tuple, str] = {}
     if os.path.exists(price_history_path):
-        already_scraped = conn.execute(f"""
-            SELECT DISTINCT id, variant FROM '{price_history_path}'
+        latest_df = conn.execute(f"""
+            SELECT id, variant, MAX(date) AS latest_date
+            FROM '{price_history_path}'
+            GROUP BY id, variant
         """).fetchdf()
-        scraped_set = set(zip(already_scraped["id"], already_scraped["variant"]))
-        print(f"Resuming — {len(scraped_set)} (card, variant) pairs already scraped.")
+        latest_date_map = {
+            (row.id, row.variant): row.latest_date
+            for row in latest_df.itertuples(index=False)
+        }
+        current_month_count = sum(1 for d in latest_date_map.values() if d >= current_month)
+        print(f"Found {len(latest_date_map)} (card, variant) pairs. "
+              f"{current_month_count} already have {current_month[:7]} prices (will skip).")
     else:
-        scraped_set = set()
-        print("No compatible existing data — starting fresh.")
+        print("No existing price history — starting fresh.")
 
     price_history_rows = []
     total = len(cards_df)
@@ -179,8 +195,9 @@ def main():
         card_name = card.get("name", "")
         variant = card.get("variant", "")
 
-        if (card_id, variant) in scraped_set:
-            continue
+        latest_date = latest_date_map.get((card_id, variant))
+        if latest_date and latest_date >= current_month:
+            continue  # already have this month's price
 
         set_id = card.get("set_id")
         if set_id == "ex4":
@@ -195,7 +212,7 @@ def main():
             chart_data = fetch_price_history(fallback_url)
 
         if chart_data:
-            rows = extract_nm_prices(chart_data, card_id, date, variant)
+            rows = extract_nm_prices(chart_data, card_id, date, variant, after_date=latest_date)
             price_history_rows.extend(rows)
             log.info(f"OK    [{i+1}/{total}] {card_name} ({variant}) — {len(rows)} pts")
         else:

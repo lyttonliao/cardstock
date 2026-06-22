@@ -72,6 +72,10 @@ set_index as (
 
 google_trends as (
     select * from {{ ref('stg_google_trends') }}
+),
+
+pokemon as (
+    select * from {{ ref('int_pokemon_price_index') }}
 )
 
 select
@@ -83,6 +87,19 @@ select
     -- How expensive is this card relative to the average card in its set?
     -- > 1 = chase card; < 1 = below-average card in the set
     monthly_price / nullif(si.set_price_index, 0)                 as price_vs_set_index,
+    -- Daily intra-month trend direction: was the price rising or falling within the month?
+    -- NULL for months before daily price collection began (~March 2026).
+    (e.daily_price_month_close - e.daily_price_month_open)
+        / nullif(e.daily_price_month_open, 0)                     as daily_intramonth_return,
+    -- Cross-Pokémon species features (NULL if pokedex_number is missing)
+    p.pokemon_num_cards,
+    p.pokemon_avg_price,
+    p.pokemon_max_price,
+    p.pokemon_avg_price_change_3m,
+    -- Is this a chase card within its species (>1), or a secondary card (<1)?
+    e.monthly_price / nullif(p.pokemon_avg_price, 0)              as price_vs_pokemon_avg,
+    -- Ratio to the most expensive card of this species: 1.0 = this IS the flagship
+    e.monthly_price / nullif(p.pokemon_max_price, 0)              as price_vs_pokemon_max,
     (
         select p2.monthly_price
         from daily p2
@@ -115,3 +132,4 @@ left join set_releases s on e.price_date = s.price_date
 left join set_index si on e.set_id = si.set_id and e.price_date = si.price_date
 left join google_trends g
     on date_trunc('month', e.price_date::date) = date_trunc('month', g.trend_date::date)
+left join pokemon p on e.pokedex_number = p.pokedex_number and e.price_date = p.price_date

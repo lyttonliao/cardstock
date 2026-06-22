@@ -45,8 +45,17 @@ def fetch_all_set_ids():
 
 
 def fetch_cards_for_set(set_id):
-    """Returns all cards for a set, or None on error."""
-    response = _get(f"{BASE_URL}/cards?q=set.id:{set_id}")
-    if response is None or not response.ok:
-        return None
-    return response.json()["data"]
+    """Returns all cards for a set, paginating through all pages. Returns None on error."""
+    cards = []
+    page = 1
+    page_size = 250  # API maximum
+    while True:
+        response = _get(f"{BASE_URL}/cards?q=set.id:{set_id}&page={page}&pageSize={page_size}")
+        if response is None or not response.ok:
+            return None
+        body = response.json()
+        cards.extend(body["data"])
+        if len(cards) >= body.get("totalCount", len(cards)):
+            break
+        page += 1
+    return cards

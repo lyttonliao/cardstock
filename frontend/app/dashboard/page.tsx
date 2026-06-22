@@ -99,17 +99,17 @@ export default async function DashboardPage() {
               {
                 header: "Pred. Return",
                 render: (c) => {
-                  const tone = pctTone(c.log_return_3m);
+                  const tone = pctTone(c.log_return_1m);
                   const cls = tone === "up" ? "text-bull" : tone === "down" ? "text-bear" : "";
-                  return <span className={cls}>{formatLogReturnPct(c.log_return_3m)}</span>
+                  return <span className={cls}>{formatLogReturnPct(c.log_return_1m)}</span>
                 },
               },
               {
                 header: "Pred. Price",
                 render: (c) => {
-                  const tone = pctTone(c.log_return_3m);
+                  const tone = pctTone(c.log_return_1m);
                   const cls = tone === "up" ? "text-bull" : tone === "down" ? "text-bear" : "";
-                  return <span className={cls}>{formatPrice(c.pred_3m)}</span>
+                  return <span className={cls}>{formatPrice(c.pred_1m)}</span>
                 },
               },
             ]}

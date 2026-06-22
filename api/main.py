@@ -9,13 +9,16 @@ from api.constants import DB_PATH, MODEL_PATH
 from api.dependencies import set_db_conn, set_model
 from api.routers import cards, predict, model, sets
 
+import os
 from pipeline.s3 import download
 from core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Download files from S3 at startup before the app serves requests
-    if settings.s3_bucket:
+    # Download files from S3 at startup before the app serves requests.
+    # Skipped when LOCAL_ONLY=1 (local dev) so S3 files don't overwrite local work.
+    local_only = os.getenv("LOCAL_ONLY", "").strip() in ("1", "true", "yes")
+    if settings.s3_bucket and not local_only:
         download(["registry", "duckdb", "model"])
 
     # Open a single read-only DuckDB connection shared across all requests.
