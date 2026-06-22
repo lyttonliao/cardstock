@@ -7,7 +7,8 @@ export function formatDate(dateStr: string) {
   return date.toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
 }
 
-export function formatPrice(value: number) {
+export function formatPrice(value: number | null | undefined): string {
+  if (value == null) return "—";
   return `$${value.toFixed(2)}`;
 }
 
@@ -17,7 +18,8 @@ export function formatPct(decimal: number | undefined): string {
   return `${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`;
 }
 
-export function formatRoundedPrice(value: number) {
+export function formatRoundedPrice(value: number | null | undefined): string {
+  if (value == null) return "—";
   if (value > Math.pow(10, 9)) return `$${Math.ceil(value / Math.pow(10, 6))}M`;
   if (value > Math.pow(10, 6)) return `$${Math.ceil(value / Math.pow(10, 6))}M`;
   if (value > Math.pow(10, 3)) return `$${Math.ceil(value / Math.pow(10, 3))}K`;
