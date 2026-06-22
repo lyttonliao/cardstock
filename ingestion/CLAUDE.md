@@ -29,6 +29,8 @@ if not cards:                          # always guard the None case
     continue
 ```
 
+**Pagination:** `fetch_cards_for_set` paginates through all pages using `page` and `pageSize=250` (API maximum). Sets with >250 cards (e.g. me2pt5 has 295) were silently truncated before this was fixed. The loop checks `totalCount` from each response to know when to stop.
+
 ## constants.py — Key Values
 
 - `REGISTRY_PATH` — path to `data/registry/card_registry.parquet`
@@ -64,6 +66,30 @@ DuckDB can query Parquet files directly: `SELECT * FROM 'data/registry/card_regi
 - Adds `random.uniform(1.5, 3.0)` second delay between requests (polite crawling).
 - `SET_SLUG_MAP` and `VARIANT_SLUG_MAP` handle naming differences between pokemontcg.io and PriceCharting URLs.
 - Falls back from variant-specific URL to base card URL if the variant 404s.
+
+## update_card_registry.py — Registry Update Logic
+
+Three modes of operation:
+
+| Mode | Command | Use case |
+|---|---|---|
+| Full update | `python ingestion/update_card_registry.py` | Run via pipeline; checks all new sets + backfills nulls |
+| Single set | `python ingestion/update_card_registry.py --set <id>` | Fast targeted update (e.g. `--set me4`) |
+
+**Full update (`main()`) execution order:**
+1. `backfill_null_price_sets(conn)` — finds registry cards with `tcgplayer_market_price IS NULL` and attempts to promote them to real priced rows once TCGPlayer has data. Also detects new card IDs that pokemontcg.io added to the set after our initial ingest.
+2. Ingest brand new sets not yet in the registry at all.
+3. `backfill_null_pokedex_numbers()` — one-time backfill for cards without `pokedex_number`.
+
+**`backfill_set(set_id)`** — targeted single-set update:
+- New card IDs not in registry → added as placeholder or priced rows (via `extract_registry_rows`)
+- Existing placeholder rows (price=NULL) → promoted to priced rows if TCGPlayer now has prices
+- Existing priced rows → skipped
+- Use this instead of running `main()` when you only need to update one set
+
+**`pokedex_number` field:** All registry rows now include `pokedex_number` (first entry from `nationalPokedexNumbers`). `NULL` for non-Pokemon cards (Trainer, Energy) and older sets before backfill. Used by `int_pokemon_price_index` for cross-species features.
+
+**pandas `pd.concat` pattern:** Always use `.reindex(columns=existing_df.columns)` on the new DataFrame before concatenating — prevents FutureWarning when new rows have all-NA columns that differ from the existing schema.
 
 ## Running Scripts
 

@@ -12,6 +12,7 @@ select
     tcgplayer_url,
     tcgplayer_market_price,
     is_specialty_set,
-    packs_per_specific_card
-from 
+    packs_per_specific_card,
+    pokedex_number
+from
     read_parquet('{{ var("data_dir") }}/registry/card_registry.parquet')

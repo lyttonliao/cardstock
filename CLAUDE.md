@@ -30,8 +30,8 @@ pokemontcg.io API + PriceCharting scraper
 
 - **DuckDB is read-only in the API.** `duckdb.connect(DB_PATH, read_only=True)` — never open it read-write in API code. Write access belongs only to the pipeline.
 - **Card identity = `(card_id, variant)`.** A card like "Charizard sv3pt5-1" exists as multiple rows — `normal`, `holofoil`, `reverseHolofoil`. Always filter/group by both fields.
-- **Prices are log returns in the ML layer.** The model predicts `log(next_3m_price / monthly_price)`. Convert back to dollars at inference: `monthly_price * exp(prediction)`.
-- **Temporal split, not random.** Train cutoff is `2026-03-01` (`api/constants.py::TRAIN_CUTOFF`). Never use random splits for this time-series data.
+- **Prices are log returns in the ML layer.** The model predicts `log(next_1m_price / monthly_price)`. Convert back to dollars at inference: `monthly_price * exp(prediction)`.
+- **Temporal split, not random.** Train cutoff is `2026-06-01` (`api/constants.py::TRAIN_CUTOFF`). Walk-forward eval cutoff is `2026-03-01` (`EVAL_CUTOFF`). Never use random splits for this time-series data.
 - **S3 is the source of truth in production.** The API pulls `registry`, `duckdb`, and `model` from S3 at startup. The pipeline pushes updated files after each run.
 
 ## Branches
@@ -53,6 +53,7 @@ Backend (`.env`):
 - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`
 - `S3_BUCKET` — where DuckDB/model/registry live
 - `ALGOLIA_APP_ID`, `ALGOLIA_WRITE_KEY`
+- `LOCAL_ONLY=1` — **local dev only**: prevents API startup from downloading S3 files and overwriting local data
 
 Frontend (`frontend/.env.local`):
 - `NEXT_PUBLIC_API_URL=/api` — client-side calls go through Next.js proxy

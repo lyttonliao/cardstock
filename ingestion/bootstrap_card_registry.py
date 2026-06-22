@@ -18,6 +18,7 @@ def extract_registry_rows(card):
         "image_small": card.get("images", {}).get("small"),
         "image_large": card.get("images", {}).get("large"),
         "tcgplayer_url": card.get("tcgplayer", {}).get("url"),
+        "pokedex_number": next(iter(card.get("nationalPokedexNumbers", [])), None),
     }
     rows = []
     for variant_name, prices in card.get("tcgplayer", {}).get("prices", {}).items():

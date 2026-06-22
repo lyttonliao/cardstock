@@ -60,13 +60,22 @@ log_return = float(model.predict(features_df)[0])
 predicted_price = round(monthly_price * np.exp(log_return), 2)
 ```
 
-`FEATURES` (41 total) and `CATEGORICAL_FEATURES` are defined in `constants.py`. Column order must match — always index with `FEATURES` list before predicting.
+`FEATURES` (50+ total) and `CATEGORICAL_FEATURES` are defined in `constants.py`. Column order must match — always index with `FEATURES` list before predicting.
 
 ## Schemas
 
 - Nested Pydantic models are used for the prediction response (`PredictResponse`). It has sub-objects: `prices`, `moving_averages`, `momentum`, `volatility`, `trend`, `market_context`, `forecast`.
-- `MoverCardSummary` in `schemas/predict.py` includes `pred_3m: float` (the predicted dollar price, not the log return).
+- `MoverCardSummary` in `schemas/predict.py` includes `pred_1m: float` (the predicted dollar price for 1 month, not the log return).
+- `MarketContext` includes `daily_day_count: Optional[int]` — distinct days of TCGPlayer data in the current month. `None` or `0` means no TCGPlayer market presence (eBay/vintage card). The frontend shows a warning banner when this is `< 8` or `null`.
 - For the cards movers endpoint, use `MoverCardSummary` from `schemas/cards.py` (no prediction fields).
+
+## TCGPlayer Presence Signal
+
+`daily_day_count` is the key signal for data quality:
+- TCGPlayer `market` price is a 7-day rolling average of actual sales — returns `None` when no recent sales
+- The daily price scraper only writes rows when `market_price` is truthy, so `daily_day_count` is a direct count of active trading days
+- Frontend threshold: `daily_day_count < 8` triggers a "Limited TCGPlayer data" warning; `null` or `0` shows "No TCGPlayer market data"
+- The XGBoost model uses `daily_day_count` as its most important feature (~35%) to route cards into two populations: TCGPlayer-tracked vs eBay/vintage
 
 ## Error Handling
 

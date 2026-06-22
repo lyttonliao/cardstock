@@ -14,7 +14,7 @@ Run order: `stg_* → int_* → fct_*`. dbt handles dependency ordering via `ref
 
 ## Key Table: fct_card_price_features
 
-The main output. One row per `(card_id, variant, price_date)`. 41 columns used as ML features plus 3 forward-looking targets.
+The main output. One row per `(card_id, variant, price_date)`. 50+ columns used as ML features plus 3 forward-looking targets.
 
 **To add a new feature:**
 1. Add it in the CTE where it belongs (`windowed` for window functions, `enriched` for derived fields, final SELECT for joins)
@@ -48,9 +48,31 @@ enriched AS (
 
 **Log return:** `LN(monthly_price / launch_price)` — always use natural log (`LN`), not `LOG`.
 
+## Intermediate Models
+
+### int_card_daily_prices.sql
+
+Aggregates TCGPlayer daily price data to monthly cadence. Contains a `daily_fill` CTE that generates synthetic monthly rows from daily averages for months not covered by PriceCharting. This allows `fct_card_price_features` to grow for recent months without re-scraping PriceCharting.
+
+New daily features computed here:
+- `daily_day_count` — distinct days of TCGPlayer data in the month; `NULL` or `0` means no TCGPlayer market presence
+- `daily_price_stddev` — stddev of daily prices within the month (price stability signal)
+- `daily_range_pct` — `(high - low) / avg` for the month (intra-month volatility)
+- `daily_intramonth_return` — `(last daily price - first daily price) / first` (directional momentum within the month)
+
+### int_pokemon_price_index.sql
+
+Cross-species aggregation. Groups cards by `pokedex_number` to build species-level features:
+- `pokemon_num_cards` — how many tracked card variants exist for this Pokémon
+- `pokemon_avg_price`, `pokemon_max_price` — species price level and flagship card price
+- `pokemon_avg_price_change_3m` — trend signal: is the whole species moving?
+- `price_vs_pokemon_avg`, `price_vs_pokemon_max` — card's position within its species
+
+These are `NULL` for non-Pokémon cards (Trainers, Energy) and cards without `pokedex_number`. XGBoost handles NULLs natively.
+
 ## Staging Gotchas
 
-- `stg_card_registry.sql`: pokemontcg.io returns dates as `"2024/01/26"` (slashes). Must cast: `cast(replace(set_release_date, '/', '-') as date)`.
+- `stg_card_registry.sql`: pokemontcg.io returns dates as `"2024/01/26"` (slashes). Must cast: `cast(replace(set_release_date, '/', '-') as date)`. Also selects `pokedex_number` (first entry from `nationalPokedexNumbers` in the registry; `NULL` for non-Pokémon cards).
 - `stg_daily_price_history.sql`: renames `market_price` → `tcgplayer_market_price` to avoid ambiguity in joins.
 - PriceCharting data (`stg_price_history`) lands on the **1st of the month** (`2026-04-01`). TCGPlayer daily data has dates like `2026-04-15`. Direct joins produce no matches — always join on `date_trunc('month', ...)`.
 

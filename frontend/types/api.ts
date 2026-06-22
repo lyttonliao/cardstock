@@ -163,11 +163,12 @@ interface MarketContext {
   days_since_release?: number,
   is_specialty_set: boolean,
   packs_per_specific_card?: number,
+  daily_day_count?: number | null,
 }
 
 interface Forecast {
-  predicted_3m_price: number,
-  log_return_3m: number,
+  predicted_1m_price: number,
+  log_return_1m: number,
   actual_next_1m_price?: number,
   actual_next_3m_price?: number,
   actual_next_6m_price?: number,
@@ -198,8 +199,8 @@ export interface PredictMovers {
   set_id: string,
   set_name: string,
   monthly_price: number,
-  log_return_3m: number,
-  pred_3m: number,
+  log_return_1m: number,
+  pred_1m: number,
 }
 
 export interface PredictionMoversResponse {

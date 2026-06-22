@@ -57,11 +57,12 @@ class MarketContext(BaseModel):
     days_since_release: Optional[int]
     is_specialty_set: bool
     packs_per_specific_card: Optional[float]        # pull rate proxy
+    daily_day_count: Optional[int]                  # distinct days of TCGPlayer data this month; None = no TCGPlayer presence
 
 
 class Forecast(BaseModel):
-    predicted_3m_price: float
-    log_return_3m: float                        # raw model output
+    predicted_1m_price: float
+    log_return_1m: float                        # raw model output
     actual_next_1m_price: Optional[float]       # non-null only for historical rows
     actual_next_3m_price: Optional[float]
     actual_next_6m_price: Optional[float]
@@ -92,8 +93,8 @@ class MoverCardSummary(BaseModel):
     set_id: str
     set_name: str
     monthly_price: float
-    log_return_3m: float
-    pred_3m: float
+    log_return_1m: float
+    pred_1m: float
 
 
 class MoversListResponse(BaseModel):
